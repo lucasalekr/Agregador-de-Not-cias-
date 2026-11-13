@@ -30,14 +30,31 @@ AGENTE = "PortalNoticiasBot/1.0 (agregador; respeita robots.txt)"
 app = Flask(__name__)
 
 
+class Conn(sqlite3.Connection):
+    """Conexão que fecha sozinha ao sair do bloco 'with' (evita travar o banco)."""
+    def __exit__(self, *a):
+        try:
+            return super().__exit__(*a)
+        finally:
+            self.close()
+
+
+ESCRITA = threading.Lock()      # só uma gravação por vez
+
+
 def db():
-    c = sqlite3.connect(DB, timeout=30)
+    c = sqlite3.connect(DB, timeout=60, factory=Conn)
     c.row_factory = sqlite3.Row
+    c.execute("PRAGMA busy_timeout=60000")
     return c
 
 
 def iniciar_banco():
-    with db() as c:
+    with ESCRITA, db() as c:
+        try:
+            c.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.Error:
+            pass
         c.execute("""CREATE TABLE IF NOT EXISTS noticias(
             id INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT UNIQUE, hash_titulo TEXT,
             titulo TEXT, resumo TEXT, link TEXT, imagem TEXT, fonte TEXT,
@@ -134,7 +151,7 @@ def reclassificar():
             padrao = {f["nome"]: f.get("tema") for f in json.load(fh)}
     except Exception:
         padrao = {}
-    with db() as c:
+    with ESCRITA, db() as c:
         for r in c.execute("SELECT id,titulo,resumo,fonte FROM noticias WHERE tema IS NULL").fetchall():
             c.execute("UPDATE noticias SET tema=? WHERE id=?",
                       (classificar(r["titulo"], r["resumo"], padrao.get(r["fonte"])), r["id"]))
@@ -182,7 +199,7 @@ def descobrir_feed(f):
 
 
 def estado(nome, **campos):
-    with db() as c:
+    with ESCRITA, db() as c:
         c.execute("INSERT OR IGNORE INTO estado(nome) VALUES(?)", (nome,))
         for k, v in campos.items():
             c.execute(f"UPDATE estado SET {k}=? WHERE nome=?", (v, nome))
@@ -214,7 +231,7 @@ def coletar_fonte(f):
         estado(f["nome"], status="feed falhou (será redescoberto)", feed_url=None, tentativa=agora)
         return 0
     novas = 0
-    with db() as c:
+    with ESCRITA, db() as c:
         for e in d.entries[:40]:
             link, titulo = e.get("link"), limpar(e.get("title"), 250)
             if not link or not titulo:
