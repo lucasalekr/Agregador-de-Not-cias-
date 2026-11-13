@@ -1,0 +1,273 @@
+[
+ {
+  "nome": "EBC",
+  "site": "https://www.ebc.com.br/",
+  "feeds": [
+   "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml"
+  ],
+  "categoria": "Jornalismo",
+  "tema": "Sociedade"
+ },
+ {
+  "nome": "Piauí",
+  "site": "https://piaui.folha.uol.com.br/",
+  "feeds": [
+   "https://piaui.folha.uol.com.br/feed/"
+  ],
+  "categoria": "Revista",
+  "tema": "Política"
+ },
+ {
+  "nome": "Superinteressante",
+  "site": "https://super.abril.com.br/",
+  "feeds": [
+   "https://super.abril.com.br/feed/"
+  ],
+  "categoria": "Ciência",
+  "tema": "Ciência"
+ },
+ {
+  "nome": "ICL",
+  "site": "https://icl.com.br/",
+  "feeds": [
+   "https://icl.com.br/feed/"
+  ],
+  "categoria": "Jornalismo",
+  "tema": "Política"
+ },
+ {
+  "nome": "Opera Mundi",
+  "site": "https://operamundi.uol.com.br/",
+  "feeds": [],
+  "categoria": "Internacional",
+  "tema": "Internacional"
+ },
+ {
+  "nome": "Le Monde Diplomatique Brasil",
+  "site": "https://diplomatique.org.br/",
+  "feeds": [
+   "https://diplomatique.org.br/feed/"
+  ],
+  "categoria": "Internacional",
+  "tema": "Internacional"
+ },
+ {
+  "nome": "Revista CULT",
+  "site": "https://revistacult.uol.com.br/",
+  "feeds": [
+   "https://revistacult.uol.com.br/home/feed/"
+  ],
+  "categoria": "Cultura",
+  "tema": "Artes"
+ },
+ {
+  "nome": "MUBI Notebook",
+  "site": "https://mubi.com/pt/notebook",
+  "feeds": [
+   "https://mubi.com/notebook/posts.atom"
+  ],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "Funarte",
+  "site": "https://www.gov.br/funarte/pt-br",
+  "feeds": [
+   "https://www.gov.br/funarte/pt-br/assuntos/noticias/RSS"
+  ],
+  "categoria": "Cultura",
+  "tema": "Artes"
+ },
+ {
+  "nome": "Revista Continente",
+  "site": "https://revistacontinente.com.br/",
+  "feeds": [
+   "https://revistacontinente.com.br/feed/"
+  ],
+  "categoria": "Cultura",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Serrote",
+  "site": "https://ims.com.br/publicacao/serrote/",
+  "feeds": [
+   "https://ims.com.br/publicacao/serrote/feed/"
+  ],
+  "categoria": "Ensaios",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Revista O Grito!",
+  "site": "https://revistaogrito.com/",
+  "feeds": [
+   "https://revistaogrito.com/feed/"
+  ],
+  "categoria": "Cultura",
+  "tema": "Artes"
+ },
+ {
+  "nome": "Quatro Cinco Um",
+  "site": "https://www.quatrocincoum.com.br/",
+  "feeds": [
+   "https://www.quatrocincoum.com.br/feed/"
+  ],
+  "categoria": "Livros",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Revista Berro",
+  "site": "https://revistaberro.com/",
+  "feeds": [
+   "https://revistaberro.com/feed/"
+  ],
+  "categoria": "Cultura",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Bravo!",
+  "site": "https://bravo.abril.com.br/",
+  "feeds": [
+   "https://bravo.abril.com.br/feed/"
+  ],
+  "categoria": "Cultura",
+  "tema": "Artes"
+ },
+ {
+  "nome": "NOIZE",
+  "site": "https://www.noize.com.br/",
+  "feeds": [
+   "https://www.noize.com.br/feed/"
+  ],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "ZUM",
+  "site": "https://revistazum.com.br/",
+  "feeds": [
+   "https://revistazum.com.br/feed/"
+  ],
+  "categoria": "Fotografia",
+  "tema": "Artes"
+ },
+ {
+  "nome": "ARTE!Brasileiros",
+  "site": "https://artebrasileiros.com.br/",
+  "feeds": [
+   "https://artebrasileiros.com.br/feed/"
+  ],
+  "categoria": "Artes",
+  "tema": "Artes"
+ },
+ {
+  "nome": "Agência Pública",
+  "site": "https://apublica.org/",
+  "feeds": [
+   "https://apublica.org/feed/"
+  ],
+  "categoria": "Jornalismo",
+  "tema": "Política"
+ },
+ {
+  "nome": "Nexo Jornal",
+  "site": "https://www.nexojornal.com.br/",
+  "feeds": [
+   "https://www.nexojornal.com.br/rss.xml"
+  ],
+  "categoria": "Jornalismo",
+  "tema": "Política"
+ },
+ {
+  "nome": "Outras Palavras",
+  "site": "https://outraspalavras.net/",
+  "feeds": [
+   "https://outraspalavras.net/feed/"
+  ],
+  "categoria": "Jornalismo",
+  "tema": "Política"
+ },
+ {
+  "nome": "Brasil de Fato",
+  "site": "https://www.brasildefato.com.br/",
+  "feeds": [
+   "https://www.brasildefato.com.br/rss"
+  ],
+  "categoria": "Jornalismo",
+  "tema": "Política"
+ },
+ {
+  "nome": "CartaCapital",
+  "site": "https://www.cartacapital.com.br/",
+  "feeds": [
+   "https://www.cartacapital.com.br/feed/"
+  ],
+  "categoria": "Jornalismo",
+  "tema": "Política"
+ },
+ {
+  "nome": "Itaú Cultural",
+  "site": "https://www.itaucultural.org.br/",
+  "feeds": [],
+  "categoria": "Cultura",
+  "tema": "Artes"
+ },
+ {
+  "nome": "Instituto Moreira Salles",
+  "site": "https://ims.com.br/",
+  "feeds": [
+   "https://ims.com.br/feed/"
+  ],
+  "categoria": "Cultura",
+  "tema": "Artes"
+ },
+ {
+  "nome": "Sesc",
+  "site": "https://www.sesc.com.br/",
+  "feeds": [],
+  "categoria": "Cultura",
+  "tema": "Artes"
+ },
+ {
+  "nome": "Cinemateca Brasileira",
+  "site": "https://cinemateca.org.br/",
+  "feeds": [
+   "https://cinemateca.org.br/feed/"
+  ],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "Enciclopédia Itaú Cultural",
+  "site": "https://enciclopedia.itaucultural.org.br/",
+  "feeds": [],
+  "categoria": "Cultura",
+  "tema": "Artes"
+ },
+ {
+  "nome": "A Escotilha",
+  "site": "https://www.aescotilha.com.br/",
+  "feeds": [
+   "https://www.aescotilha.com.br/feed/"
+  ],
+  "categoria": "Cultura",
+  "tema": "Artes"
+ },
+ {
+  "nome": "Jornal Opção",
+  "site": "https://www.jornalopcao.com.br/",
+  "feeds": [
+   "https://www.jornalopcao.com.br/feed/"
+  ],
+  "categoria": "Jornalismo",
+  "tema": "Política"
+ },
+ {
+  "nome": "Ministério da Cultura",
+  "site": "https://www.gov.br/cultura/pt-br",
+  "feeds": [
+   "https://www.gov.br/cultura/pt-br/assuntos/noticias/RSS"
+  ],
+  "categoria": "Governo",
+  "tema": "Artes"
+ }
+]
