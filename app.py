@@ -59,10 +59,11 @@ def iniciar_banco():
             id INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT UNIQUE, hash_titulo TEXT,
             titulo TEXT, resumo TEXT, link TEXT, imagem TEXT, fonte TEXT,
             categoria TEXT, publicado INTEGER)""")
-        try:
-            c.execute("ALTER TABLE noticias ADD COLUMN tema TEXT")
-        except sqlite3.OperationalError:
-            pass
+        for coluna in ("tema", "busca"):
+            try:
+                c.execute(f"ALTER TABLE noticias ADD COLUMN {coluna} TEXT")
+            except sqlite3.OperationalError:
+                pass
         c.execute("CREATE INDEX IF NOT EXISTS i_pub ON noticias(publicado DESC)")
         c.execute("CREATE INDEX IF NOT EXISTS i_fonte ON noticias(fonte)")
         c.execute("CREATE INDEX IF NOT EXISTS i_tema ON noticias(tema)")
@@ -157,6 +158,9 @@ def reclassificar():
         for r in c.execute("SELECT id,titulo,resumo,fonte FROM noticias WHERE tema IS NULL").fetchall():
             c.execute("UPDATE noticias SET tema=? WHERE id=?",
                       (classificar(r["titulo"], r["resumo"], padrao.get(r["fonte"])), r["id"]))
+        for r in c.execute("SELECT id,titulo,resumo,fonte FROM noticias WHERE busca IS NULL").fetchall():
+            c.execute("UPDATE noticias SET busca=? WHERE id=?",
+                      (_norm((r["titulo"] or "") + " " + (r["resumo"] or "") + " " + (r["fonte"] or "")), r["id"]))
 
 
 CAMINHOS = ["feed/", "feed", "rss", "rss.xml", "feed.xml", "atom.xml", "index.xml", "RSS"]
@@ -244,11 +248,12 @@ def coletar_fonte(f):
                 continue
             t = e.get("published_parsed") or e.get("updated_parsed")
             pub = min(timegm(t), agora) if t else agora
-            cur = c.execute("""INSERT OR IGNORE INTO noticias(hash,hash_titulo,titulo,resumo,link,imagem,fonte,categoria,publicado,tema)
-                         VALUES(?,?,?,?,?,?,?,?,?,?)""",
+            cur = c.execute("""INSERT OR IGNORE INTO noticias(hash,hash_titulo,titulo,resumo,link,imagem,fonte,categoria,publicado,tema,busca)
+                         VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
                       (h, ht, titulo, limpar(e.get("summary")), link, achar_imagem(e),
                        f["nome"], f.get("categoria", "Geral"), pub,
-                       classificar(titulo, limpar(e.get("summary")), f.get("tema"))))
+                       classificar(titulo, limpar(e.get("summary")), f.get("tema")),
+                       _norm(titulo + " " + limpar(e.get("summary")) + " " + f["nome"])))
             novas += cur.rowcount
         c.execute("INSERT OR REPLACE INTO controle VALUES(?,?,?)",
                   (feed, getattr(d, "etag", None), getattr(d, "modified", None)))
@@ -417,10 +422,21 @@ def erro_geral(ex):
             f"<pre>{type(ex).__name__}: {ex}</pre>"), 500
 
 
+def _com_busca(sql, p):
+    """Pesquisa sem diferenciar maiúsculas/acentos (cada palavra precisa aparecer)."""
+    for w in _norm(request.args.get("q", "")).split()[:6]:
+        w = re.sub(r"[%_\\]", "", w)
+        if w:
+            sql += " AND busca LIKE ?"
+            p.append("%" + w + "%")
+    return sql, p
+
+
 @app.route("/api/noticias")
 def api_noticias():
     antes = int(request.args.get("antes", 9999999999))
     sql, p = "SELECT * FROM noticias WHERE publicado<?", [antes]
+    sql, p = _com_busca(sql, p)
     for campo in ("tema", "fonte"):
         v = request.args.get(campo)
         if v:
@@ -438,6 +454,7 @@ def api_filtros():
     def cont(col, outro, valor):
         sql = f"SELECT {col} n, COUNT(*) t FROM noticias WHERE {col} IS NOT NULL"
         p = []
+        sql, p = _com_busca(sql, p)
         if valor:
             sql += f" AND {outro}=?"
             p.append(valor)
@@ -477,74 +494,120 @@ def stream():
 PAGINA = r"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>__NOME__</title>
 <style>
-:root{--bg:#f3ebdc;--card:#fffaf0;--tx:#1b1212;--mut:#6b5a58;--red:#b3121f;--red2:#7f0d16;--gold:#f2b705;--bd:#e2d6c0}
-@media(prefers-color-scheme:dark){:root{--bg:#150909;--card:#211111;--tx:#f6ece0;--mut:#b9a49f;--red:#d62b32;--red2:#8e1119;--bd:#3a1d1d}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,Segoe UI,Arial,sans-serif}
-.top{background:var(--red);color:#fff7e8;border-bottom:5px solid var(--gold)}
-.wrap{max-width:1180px;margin:auto;padding:16px;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px}
-h1{margin:0;font:900 1.9rem/1.1 Impact,"Arial Black",system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase}
-.live{font-size:.82rem;font-weight:700;letter-spacing:.03em}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--gold);margin-right:6px;animation:p 1.6s infinite}
-@keyframes p{50%{opacity:.25}}
-.layout{max-width:1180px;margin:auto;display:flex;gap:22px;padding:16px;align-items:flex-start}
-aside{width:250px;flex:none;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--card);border:1px solid var(--bd);border-top:4px solid var(--red);border-radius:6px;padding:6px 10px 12px}
-aside h3{margin:14px 0 6px;font:800 .78rem system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--red)}
-aside ul{list-style:none;margin:0;padding:0}
-aside button{width:100%;display:flex;align-items:center;gap:8px;text-align:left;border:0;background:none;color:var(--tx);padding:6px 8px;border-radius:4px;cursor:pointer;font:inherit;font-size:.9rem}
-aside button:hover{background:var(--bd)}aside button.on{background:var(--red);color:#fff;font-weight:700}
-aside .sq{width:11px;height:11px;border-radius:2px;flex:none}aside .n{margin-left:auto;font-size:.75rem;opacity:.7}
-main{flex:1;min-width:0}main h2.t{margin:2px 0 8px;font:900 1.2rem Impact,"Arial Black",system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;border-bottom:3px solid var(--red);padding-bottom:6px}
-a.item{display:flex;gap:14px;background:var(--card);border:1px solid var(--bd);border-left:7px solid #888;border-radius:6px;padding:12px;margin:10px 0;text-decoration:none;color:inherit}
-a.item:hover{border-color:var(--red)}
-a.item img{width:130px;height:90px;object-fit:cover;border-radius:4px;flex:none}
-.meta{font-size:.78rem;color:var(--mut);margin-bottom:3px}.meta b{color:var(--tx)}
-.tag{display:inline-block;color:#fff;font-weight:800;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:3px;margin-right:6px}
-h2.c{font-size:1.08rem;margin:2px 0 4px}p{margin:0;color:var(--mut);font-size:.9rem}
-.novo{animation:f 1.5s}@keyframes f{from{background:#f2b70555}}
-#mais{display:block;margin:20px auto;padding:10px 26px;border-radius:4px;border:2px solid var(--red);background:none;color:var(--red);font-weight:700;cursor:pointer}
-#fb{display:none;margin:12px 16px 0;padding:8px 16px;border:2px solid var(--red);background:var(--card);color:var(--red);font-weight:700;border-radius:4px}
-@media(max-width:800px){.layout{flex-direction:column;padding:10px}aside{display:none;width:100%;position:static;max-height:none}aside.open{display:block}#fb{display:inline-block}
- a.item img{width:90px;height:66px}h1{font-size:1.5rem}}
+:root{--bg:#f4f1ea;--card:#fbf9f4;--tx:#111;--mut:#5d5852;--red:#e0201f;--ln:#111}
+@media(prefers-color-scheme:dark){:root{--bg:#0f0f0f;--card:#171717;--tx:#f4f1ea;--mut:#a39d94;--red:#ff4a3d;--ln:#4a4a4a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif}
+.hero{position:relative;overflow:hidden;border-bottom:2px solid var(--ln);color:var(--tx)}
+.art{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.hw{position:relative;z-index:1;max-width:1320px;margin:auto;padding:22px 24px 26px}
+.kick{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);margin-right:7px;animation:p 1.6s infinite}@keyframes p{50%{opacity:.25}}
+h1{margin:34px 0 26px;max-width:11em;font-weight:900;font-size:clamp(2.4rem,7.2vw,5.6rem);line-height:.92;letter-spacing:-.045em}
+h1 .st{color:var(--red)}
+.search{display:flex;max-width:640px;border:2px solid var(--ln);background:var(--bg)}
+.search input{flex:1;min-width:0;border:0;background:none;color:inherit;font:inherit;font-size:1.05rem;padding:13px 14px;outline:none}
+.search button{border:0;border-left:2px solid var(--ln);background:var(--red);color:#fff;font-weight:800;padding:0 18px;cursor:pointer;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase}
+.layout{max-width:1320px;margin:auto;display:flex;gap:28px;padding:22px 24px 50px;align-items:flex-start}
+aside{width:236px;flex:none;position:sticky;top:14px;max-height:calc(100vh - 28px);overflow-y:auto}
+aside h3{margin:0 0 6px;padding-top:8px;border-top:2px solid var(--ln);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase}
+aside ul{list-style:none;margin:0 0 24px;padding:0}
+aside button{width:100%;display:flex;align-items:center;gap:9px;text-align:left;border:0;border-bottom:1px solid var(--ln);background:none;color:var(--tx);padding:7px 6px;cursor:pointer;font:inherit;font-size:.88rem}
+aside button:hover{color:var(--red)}aside button.on{background:var(--red);color:#fff;font-weight:800}
+aside .sq{width:10px;height:10px;flex:none}aside .n{margin-left:auto;font-size:.74rem;font-variant-numeric:tabular-nums;opacity:.7}
+main{flex:1;min-width:0}
+.bar{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-bottom:8px;border-top:2px solid var(--ln);padding-top:8px}
+.bar h2{margin:0;font-size:1.05rem;font-weight:900;letter-spacing:-.01em}.bar span{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));border-top:1px solid var(--ln);border-left:1px solid var(--ln)}
+a.card{display:flex;flex-direction:column;background:var(--card);color:inherit;text-decoration:none;border-right:1px solid var(--ln);border-bottom:1px solid var(--ln)}
+.im{aspect-ratio:16/10;overflow:hidden;background:#ccc;border-bottom:1px solid var(--ln)}
+.im img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}a.card:hover .im img{transform:scale(1.04)}
+.ph{width:100%;height:100%;background:radial-gradient(circle at 28% 30%,rgba(255,255,255,.55),transparent 42%),radial-gradient(circle at 70% 75%,rgba(0,0,0,.35),transparent 50%),var(--c)}
+.cb{padding:12px 14px 14px;display:flex;flex-direction:column;gap:7px;flex:1}
+.row{display:flex;justify-content:space-between;gap:10px;font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.tag{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.tag i{width:10px;height:10px;background:var(--c);display:inline-block}
+.src{color:var(--mut);text-align:right}
+a.card h3{margin:0;font-size:1.12rem;line-height:1.12;letter-spacing:-.02em;font-weight:800}a.card:hover h3{color:var(--red)}
+a.card p{margin:0;font-size:.85rem;line-height:1.35;color:var(--mut);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+a.card time{margin-top:auto;padding-top:8px;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.novo{animation:f 1.6s}@keyframes f{from{background:rgba(224,32,31,.25)}}
+.vazio{padding:30px 14px;color:var(--mut)}
+#mais{display:block;margin:24px auto 0;padding:12px 30px;border:2px solid var(--ln);background:none;color:var(--tx);font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:.78rem;cursor:pointer}
+#mais:hover{background:var(--red);color:#fff;border-color:var(--red)}
+#fb{display:none;margin:14px 24px 0;padding:9px 16px;border:2px solid var(--ln);background:none;color:var(--tx);font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:.75rem}
+@media(max-width:860px){.layout{flex-direction:column;padding:14px}aside{display:none;width:100%;position:static;max-height:none}aside.open{display:block}#fb{display:inline-block}.hw{padding:18px 16px 22px}.grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
 </style></head><body>
-<div class="top"><div class="wrap"><h1>★ __NOME__</h1>
-<div class="live"><span class="dot"></span>AO VIVO · Última atualização: <span id="upd">aguardando…</span></div></div></div>
+<header class="hero">
+<svg class="art" viewBox="0 0 1200 470" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+<defs>
+<radialGradient id="sp" cx=".34" cy=".3" r=".9"><stop offset="0" stop-color="#ffc2cf"/><stop offset=".42" stop-color="#f2506f"/><stop offset="1" stop-color="#b3121f"/></radialGradient>
+<filter id="gr" x="-15%" y="-15%" width="130%" height="130%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="b"/>
+<feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" seed="7" result="n"/>
+<feColorMatrix in="n" type="matrix" values="0 0 0 0 .1  0 0 0 0 0  0 0 0 0 0  0 0 0 1.5 -.62" result="d"/>
+<feComposite in="d" in2="b" operator="in" result="dd"/><feMerge><feMergeNode in="b"/><feMergeNode in="dd"/></feMerge></filter>
+<filter id="air" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="16"/></filter>
+</defs>
+<circle cx="1010" cy="225" r="205" fill="url(#sp)" filter="url(#gr)"/>
+<path d="M1200 470 L1200 190 A280 280 0 0 0 920 470 Z" fill="#e0201f" opacity=".55" filter="url(#air)"/>
+<circle cx="1130" cy="400" r="95" fill="currentColor" opacity=".85" filter="url(#air)"/>
+<circle cx="760" cy="70" r="46" fill="#ff7a59" opacity=".8" filter="url(#air)"/>
+<circle cx="1010" cy="225" r="262" fill="none" stroke="currentColor" stroke-width="1.4"/>
+<circle cx="1010" cy="225" r="318" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".6"/>
+<line x1="640" y1="0" x2="640" y2="470" stroke="currentColor" stroke-width="1.4" opacity=".5"/>
+</svg>
+<div class="hw">
+<div class="kick"><span><span class="dot"></span>Ao vivo</span><span>Última atualização: <span id="upd">aguardando…</span></span></div>
+<h1><span class="st">★</span> __NOME__</h1>
+<form class="search" id="f" onsubmit="return false"><input id="q" type="search" placeholder="Pesquisar notícias, temas ou portais…" autocomplete="off" aria-label="Pesquisar"><button type="button" id="x">Limpar</button></form>
+</div></header>
 <button id="fb">☰ Filtros</button>
 <div class="layout"><aside id="side"><h3>Eixos temáticos</h3><ul id="temas"></ul><h3>Portais</h3><ul id="fontes"></ul></aside>
-<main><h2 class="t" id="titulo">Todas as notícias</h2><div id="lista"></div><button id="mais">Carregar mais</button></main></div>
+<main><div class="bar"><h2 id="titulo">Todas as notícias</h2><span id="cont"></span></div><div class="grid" id="lista"></div><button id="mais">Carregar mais</button></main></div>
 <script>
-const CORES={"Política":"#c8102e","Internacional":"#1f4e5f","Sociedade":"#d9480f","Música":"#a87400","Cinema":"#6d28d9","Entretenimento":"#c2255c","Artes":"#2b8a3e","Literatura":"#7c4a1e","Ciência":"#1971c2"};
-let tema="",fonte="",ultimo=null,timer=null;const $=id=>document.getElementById(id),L=$("lista");
+const CORES={"Política":"#e0201f","Internacional":"#1f4e5f","Sociedade":"#e8590c","Música":"#e0a100","Cinema":"#6d28d9","Entretenimento":"#d6336c","Artes":"#2b8a3e","Literatura":"#8a5a2b","Ciência":"#1971c2"};
+let tema="",fonte="",q="",ultimo=null,timer=null,bt=null;const $=id=>document.getElementById(id),L=$("lista");
+const norm=t=>(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 function ago(t){const s=Math.max(0,Date.now()/1000-t);if(s<60)return"agora";if(s<3600)return"há "+Math.floor(s/60)+" min";
  if(s<86400)return"há "+Math.floor(s/3600)+" h";return new Date(t*1000).toLocaleDateString("pt-BR")}
 function fmt(t){return new Date(t*1000).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).replace(", "," às ")}
-function card(n,novo){const a=document.createElement("a");a.className="item"+(novo?" novo":"");a.href=n.link;a.target="_blank";a.rel="noopener";
- a.style.borderLeftColor=CORES[n.tema]||"#888";
- if(n.imagem){const i=document.createElement("img");i.src=n.imagem;i.loading="lazy";i.onerror=()=>i.remove();a.appendChild(i)}
- const d=document.createElement("div"),m=document.createElement("div");m.className="meta";
- const g=document.createElement("span");g.className="tag";g.style.background=CORES[n.tema]||"#666";g.textContent=n.tema||"Geral";
- const b=document.createElement("b");b.textContent=n.fonte;m.append(g,b," · "+ago(n.publicado));
- const h=document.createElement("h2");h.className="c";h.textContent=n.titulo;const p=document.createElement("p");p.textContent=n.resumo||"";
- d.append(m,h,p);a.appendChild(d);return a}
-function qs(extra){const q=new URLSearchParams(extra||{});if(tema)q.set("tema",tema);if(fonte)q.set("fonte",fonte);return q}
-function titulo(){$("titulo").textContent=(tema||fonte)?[tema,fonte].filter(Boolean).join(" · "):"Todas as notícias"}
+function card(n,novo){const a=document.createElement("a");a.className="card"+(novo?" novo":"");a.href=n.link;a.target="_blank";a.rel="noopener";
+ a.style.setProperty("--c",CORES[n.tema]||"#666");
+ const im=document.createElement("div");im.className="im";
+ const ph=()=>{im.innerHTML="";const p=document.createElement("div");p.className="ph";im.appendChild(p)};
+ if(n.imagem){const i=document.createElement("img");i.src=n.imagem;i.loading="lazy";i.alt="";i.onerror=ph;im.appendChild(i)}else ph();
+ const b=document.createElement("div");b.className="cb",r=document.createElement("div");r.className="row";
+ const tg=document.createElement("span");tg.className="tag";tg.append(document.createElement("i"),n.tema||"Geral");
+ const sr=document.createElement("span");sr.className="src";sr.textContent=n.fonte;r.append(tg,sr);
+ const h=document.createElement("h3");h.textContent=n.titulo;b.append(r,h);
+ if(n.resumo){const p=document.createElement("p");p.textContent=n.resumo;b.append(p)}
+ const t=document.createElement("time");t.textContent="Atualizado "+ago(n.publicado);t.title=fmt(n.publicado);b.append(t);
+ a.append(im,b);return a}
+function qs(extra){const p=new URLSearchParams(extra||{});if(tema)p.set("tema",tema);if(fonte)p.set("fonte",fonte);if(q)p.set("q",q);return p}
+function titulo(){const f=[tema,fonte].filter(Boolean).join(" · ");$("titulo").textContent=q?("Resultados para “"+q+"”"+(f?" · "+f:"")):(f||"Todas as notícias")}
 async function carregar(reset){if(reset){L.innerHTML="";ultimo=null}titulo();
  const r=await (await fetch("/api/noticias?"+qs(ultimo?{antes:ultimo}:{}))).json();
  r.forEach(n=>{L.appendChild(card(n));ultimo=n.publicado});$("mais").style.display=r.length<30?"none":"block";
- if(reset&&!r.length)L.innerHTML="<p>Nenhuma notícia ainda neste filtro.</p>"}
+ if(reset&&!r.length){const d=document.createElement("div");d.className="vazio";d.textContent="Nenhuma notícia encontrada.";L.appendChild(d)}}
 function item(nome,total,on,cor,click){const li=document.createElement("li"),b=document.createElement("button");if(on)b.className="on";
  if(cor){const s=document.createElement("span");s.className="sq";s.style.background=cor;b.appendChild(s)}
  const t=document.createElement("span");t.textContent=nome;const n=document.createElement("span");n.className="n";n.textContent=total;
  b.append(t,n);b.onclick=()=>{click();$("side").classList.remove("open")};li.appendChild(b);return li}
 async function filtros(){const r=await (await fetch("/api/filtros?"+qs())).json();
  const mp=Object.fromEntries(r.temas.map(x=>[x.nome,x.total])),T=$("temas"),F=$("fontes");T.innerHTML="";F.innerHTML="";
- T.appendChild(item("Todas",Object.values(mp).reduce((a,b)=>a+b,0),!tema,null,()=>{tema="";go()}));
+ const totT=Object.values(mp).reduce((a,b)=>a+b,0),totF=r.fontes.reduce((a,b)=>a+b.total,0);
+ T.appendChild(item("Todas",totT,!tema,null,()=>{tema="";go()}));
  Object.keys(CORES).forEach(k=>T.appendChild(item(k,mp[k]||0,tema===k,CORES[k],()=>{tema=k;go()})));
- F.appendChild(item("Todos os portais",r.fontes.reduce((a,b)=>a+b.total,0),!fonte,null,()=>{fonte="";go()}));
+ F.appendChild(item("Todos os portais",totF,!fonte,null,()=>{fonte="";go()}));
  r.fontes.forEach(x=>F.appendChild(item(x.nome,x.total,fonte===x.nome,null,()=>{fonte=x.nome;go()})));
+ const n=fonte?((r.fontes.find(x=>x.nome===fonte)||{}).total||0):totF;$("cont").textContent=n+(n===1?" notícia":" notícias");
  $("upd").textContent=r.atualizado?fmt(r.atualizado):"aguardando a primeira coleta…"}
 function go(){carregar(true);filtros()}
 $("mais").onclick=()=>carregar(false);$("fb").onclick=()=>$("side").classList.toggle("open");
+$("q").oninput=()=>{clearTimeout(bt);bt=setTimeout(()=>{q=$("q").value.trim();go()},300)};
+$("x").onclick=()=>{$("q").value="";q="";go()};
 const es=new EventSource("/stream");
-es.onmessage=e=>{const n=JSON.parse(e.data);if((!tema||tema===n.tema)&&(!fonte||fonte===n.fonte))L.prepend(card(n,true));
+es.onmessage=e=>{const n=JSON.parse(e.data),h=norm(n.titulo+" "+(n.resumo||"")+" "+n.fonte);
+ const ok=norm(q).split(/\s+/).filter(Boolean).every(w=>h.includes(w));
+ if(ok&&(!tema||tema===n.tema)&&(!fonte||fonte===n.fonte)){const v=L.querySelector(".vazio");if(v)v.remove();L.prepend(card(n,true))}
  clearTimeout(timer);timer=setTimeout(filtros,2000)};
 go();setInterval(filtros,30000);
 </script></body></html>
