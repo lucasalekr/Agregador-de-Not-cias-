@@ -1,5 +1,5 @@
 """Agregador de notícias em tempo real. Veja o README.md para instruções."""
-import hashlib, json, os, re, socket, sqlite3, threading, time, urllib.request
+import base64, hashlib, json, os, re, socket, sqlite3, threading, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from calendar import timegm
 from html import unescape
@@ -71,6 +71,14 @@ def iniciar_banco():
         c.execute("CREATE TABLE IF NOT EXISTS acessos(tema TEXT PRIMARY KEY, total INTEGER DEFAULT 0)")
         c.execute("CREATE TABLE IF NOT EXISTS controle(url TEXT PRIMARY KEY, etag TEXT, modified TEXT)")
         c.execute("CREATE TABLE IF NOT EXISTS estado(nome TEXT PRIMARY KEY, feed_url TEXT, tentativa INTEGER, ultima INTEGER, status TEXT)")
+        for coluna in ("proxima", "espera"):
+            try:
+                c.execute(f"ALTER TABLE estado ADD COLUMN {coluna} INTEGER")
+            except sqlite3.OperationalError:
+                pass
+        for velho, novo in MAPA_TEMAS.items():
+            c.execute("UPDATE noticias SET tema=? WHERE tema=?", (novo, velho))
+            c.execute("DELETE FROM acessos WHERE tema=?", (velho,))
 
 
 def limpar(txt, limite=300):
@@ -214,21 +222,24 @@ import unicodedata
 
 ULTIMA = {"t": None}      # hora da última checagem de fontes
 
+MAPA_TEMAS = {"Sociedade": "Pensamento e Sociedade", "Filosofia": "Pensamento e Sociedade", "Cinema": "Cinema e Entretenimento",
+              "Entretenimento": "Cinema e Entretenimento", "Artes": "Artes e Arquitetura", "Ciência": "Ciência e Tecnologia",
+              "Tecnologia": "Ciência e Tecnologia"}
+
 TEMAS = {
  "Política": "governo president* lula bolsonaro congresso senado senador* camara deputad* eleic* eleitor* partido* ministr* stf supremo politic* golpe democracia planalto prefeit* governador* oposicao tse impeachment orcamento voto* esquerda direita ditadura sindicat* greve mst pt psol pl",
  "Internacional": "eua estados unidos trump china russia ucrania israel gaza palestin* guerra otan onu europa argentina venezuela cuba franca america latina africa oriente medio biden milei putin internacional imperialismo",
- "Sociedade": "racism* racial genero feminis* lgbt* indigen* quilomb* violencia direitos humanos educacao saude moradia favela desigualdade periferia meio ambiente clima amazonia policia justica trabalho previdencia salario",
+ "Pensamento e Sociedade": "racism* racial genero feminis* lgbt* direitos humanos educacao saude desigualdade periferia violencia justica trabalho previdencia salario sociologia antropolog* filosofia filosof* etica pensador* pensamento metafisica epistemologia fenomenologia kant hegel nietzsche marx* foucault dialetica comportamento familia juventude",
+ "Decolonial": "decolonial* descoloniz* colonial* colonialismo colonizacao indigen* quilomb* afro* negro negros negra negras ancestral* ancestralidade epistemolog* originarios racismo",
+ "Meio Ambiente": "ambient* clima climatic* aquecimento desmatamento floresta* amazonia queimada* biodiversidade sustentab* ecolog* poluicao carbono emissoes fauna flora oceano mineracao garimpo agrotoxic* cop30 bioma* cerrado pantanal",
+ "Identidade Brasileira": "brasileir* patrimonio iphan memoria tradicao tradicoes folclore regional* identidade historia saberes museu da pessoa",
  "Música": "music* musico* cantor* cantora show* album* banda* disco* festival rock samba mpb rap funk jazz forro sertanej* dj single turne clipe compositor* orquestra violao bossa nova hip hop",
- "Cinema": "filme* cinema* cineast* documentario* curta-metragem longa-metragem oscar cannes roteir* audiovisual atriz ator diretor* mubi",
- "Entretenimento": "serie series novela* celebridade* reality bbb famos* humor game* jogo* streaming netflix podcast tv televisao quadrinho* anime",
- "Artes": "arte artes artista* exposic* museu* galeria fotograf* escultur* pintur* instalac* bienal curador* teatro danca performance patrimonio acervo",
+ "Cinema e Entretenimento": "filme* cinema* cineast* documentario* curta-metragem longa-metragem oscar cannes roteir* audiovisual atriz ator diretor* mubi serie series novela* celebridade* reality bbb famos* humor game* jogo* streaming netflix podcast tv televisao quadrinho* anime",
+ "Artes e Arquitetura": "arte artes artista* exposic* museu* galeria fotograf* escultur* pintur* instalac* bienal curador* teatro danca performance acervo arquitet* urbanismo urbano cidade* design paisagismo edificio",
  "Literatura": "livro* literatur* escritor* escritora romance poesia poema* poet* autor* autora editora ensaio* resenha conto* leitura prosa",
- "Ciência": "ciencia* cientist* pesquisa* universo astronom* espaco nasa biolog* fisica quimica tecnologia inteligencia artificial ia algoritm* internet dinossauro* descobert* planeta cerebro",
+ "Ciência e Tecnologia": "ciencia* cientist* pesquisa* universo astronom* espaco nasa biolog* fisica quimica dinossauro* descobert* planeta cerebro tecnologia tecnologic* tecnolog* digital digitais inteligencia artificial ia algoritm* aplicativo* app software hardware celular smartphone* internet plataforma* startup* privacidade ciberseguranc* hacker* cibernetic* robo* chatgpt openai google apple microsoft tiktok instagram whatsapp bitcoin cripto*",
+ "Voluntariado": "voluntari* doacao doacoes doar solidariedade ong ongs mutirao caridade filantrop* comunitari* humanitari*",
 }
-
-
-TEMAS["Filosofia"] = "filosofia filosof* etica metafisica epistemologia ontologia fenomenologia kant hegel nietzsche marx* heidegger foucault pensador* dialetica"
-TEMAS["Voluntariado"] = "voluntari* doacao doacoes doar solidariedade ong ongs mutirao caridade filantrop* comunitari* humanitari*"
 
 
 def _norm(t):
@@ -244,9 +255,12 @@ def _compilar(lista):
 
 # palavras com espaço (ex.: "estados unidos") foram separadas acima; usamos listas com " | " para frases
 FRASES = {"Internacional": ["estados unidos", "america latina", "oriente medio"],
-          "Sociedade": ["direitos humanos", "meio ambiente"],
+          "Pensamento e Sociedade": ["direitos humanos"],
+          "Decolonial": ["povos originarios"],
+          "Meio Ambiente": ["meio ambiente", "mata atlantica", "mudancas climaticas"],
+          "Identidade Brasileira": ["cultura popular", "identidade nacional", "historia de vida"],
           "Música": ["bossa nova", "hip hop"],
-          "Ciência": ["inteligencia artificial"]}
+          "Ciência e Tecnologia": ["inteligencia artificial", "redes sociais", "big tech"]}
 PADROES = {}
 for _t, _l in TEMAS.items():
     _p = _compilar(_l)
@@ -398,9 +412,15 @@ def coletar_fonte(f):
 
 def coletar_seguro(f):
     try:
+        with db(8) as c:
+            est = c.execute("SELECT proxima,espera FROM estado WHERE nome=?", (f["nome"],)).fetchone()
+        if est and est["proxima"] and time.time() < est["proxima"]:
+            return                          # fonte tranquila: só volta a ser consultada mais tarde
         n = coletar_fonte(f)
         if n:
             print(f"[{f['nome']}] {n} nova(s)")
+        espera = INTERVALO if n else min(1800, int(((est and est["espera"]) or INTERVALO) * 1.6))
+        estado(f["nome"], espera=espera, proxima=int(time.time()) + espera)
     except Exception as ex:
         print(f"[{f.get('nome')}] falhou: {ex}")
         try:
@@ -629,6 +649,26 @@ def api_radio(id_):
     return jsonify(nome=r["nome"], freq=r["freq"], stream=url, tipo=tipo, embed=EMBED_EBC + r["slug"])
 
 
+ICONE48 = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAABSElEQVR42u2ZwRGEIAxFLYT73vdGISmERiiEQtKDZwrZvegM46AiJIGMHP6RMU9/QhKX9fNdNGuZABNgbADYpBYgbFIL8NukEgASANAIgAkAagMwSfC7jCYAlwFwmgAwA4BaAHL2YbORlH3YbCRlHzYbUQdvL4LfZUcG8AUAfmSAWAAQuQGgUq4g+DSZa59zCWAL32IvxWMOndVxHDB4zN0jrQkpJV+bxNDZUvGuFS9tDXAUy7SUUT+CZVrvARAIHrgvMsOUF7GmW23dOFAFH3q1El7S7xwASFRtugAYQguZHgDQq/LMJD6sDakkCgAPanvktJHU6Mg2anKMjmcdJBScEwEwN8lobs4GynJKtbiKDz189jWcBADW9O2FcwZKAFCvCl1LOa0tn7jSLmrTr8E6DwTqzVqmPAdOAMsYfNUz5o/uCfB2gD9b6wCAxU6iqQAAAABJRU5ErkJggg==")
+ICONE180 = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAFJklEQVR42u3dvXHbQBiEYRWC3LkzFMJC0AgKYSHsgTEKkT0jekb2WBxSxM/dfk+wuXh8dVx8u7h7u/74+UaUIotAgCYCNBGgiQBNgCYCNBGgiQBNBGgCNBGgiQBNBOiOdbrJWgA6QuebrAWgu9fwW+83DdYD0L1r+gT0ZD0A3bsun4C+WA9Ap9gNtgPQUXaD7QB0lN1gOwAdZzfYDkB3q/kO0LP1AXRvWu4AvVgfQPek8Q7MfzRaJ0An2A22A9BRdoPtAHSc3WA7AB1lN9gOQHej9ydlzQDddJH/WaAV/wHddJH/WaAV/wEdYzfYDkBH2Q22A9BRdoPtAHR3zbpHpYEH6KaL/M9K8R/QTRf5n5XiP6Bj7AbbAegou8F2ADrKbrAdgI6zG2wHoLtq1mngATqiyP+sFP8B3XyR/1kp/gM6wm6wHYCOshtsB6Dj7AbbAegou8F2ALqbIr/iP6CjivyK/4COKvIr/gO6rN1gOwAdZTfYDkB31azTwAN0XLNOAw/QEUV+xX9Al7QbbAeg4+wG2wHoKLvBdgA6ym6wHYDurlmngQfoqGadBh6gI4r8iv+ALms32A5AR9kNtgPQUXaD7QB0nN1gO4oAPdxqlt/RfCvS/6ulYaCXL/7m+YV1GCoCPT6wMNMXi/2I3qlLfff7nh7gadx6hwYeNfsKWs/dBsrWtLeHHhv3mdSnllceetd4GGNBaE2LMVwbmHKwINREPXbtuS0LQrtajK3n0EMj3WHqQ5e159+VOhBUoJOy9aEsLAj9z2JsdnjOHpE0C0KbWYyjuhwsCO1Se00/F47a0G7n8x3RiuOra/nlXVt8Fc5Ypk6KRb33oVkQFiOu4M+CsBiRb6ywICxG3CtYCk7Fi0WJ7xQqOBUuFqW+JKtjXaS7XO2tbxaExYg7xoAFYTHizuVQcCpSLKoCtIKT8/RiT07SsQ7qLgOaBWExgs+2Y0FYjLjDGhWc3C0ed/qoglNIsQjQCk5RxSJAsyDlLUY60CxIMYtRAWgWpJDFqAS0glNnxSJAKzhFFYsALV2MTv0AfV/Vd2jXuoXZjupAj4B2xbF+BqBdcdzwQyGgQx4Ijes+NADaLNoMGtBNycsAf4/vAG1cZ3wHaO077TpAKygpJgGa3WA7SgAtHSyYGkoHpYaAlg5KDQEtHZQaAlo6KDUEtHSwcGpoXGd8B2jpoNQQ0NJBqSGg2Q22ozbQ0sHiqaF0cL8go9WgZwa0dPA79/m1ev/iAmjp4Cv3k7R4T8wAaOngK7estrZbT4CWDq4BRyv/hBdAG9etdX5cK+fuAVo6uOpP9tG79QnQ0sG1j6g98ujfM6Br240t57cz21EX6LHzXbml3XoEdK108Hzdd2a793hvBnSNdPDoS9xPO35OQIeng3vvykfv1gOgc9PByWcGdEI62PolO8PGnx3QQeO6yS8UoBPSwV7v8dtivHcCdN/pYELJfb5KDd+q242021XX3K0B3Vk6eL5mHoe11nhvBHQfP6/LNfwU+5XCmBnQ7aeDqbvyFrv1Aui208GpEMhrjfcGQLf35VyK7cprhjEToNtKBycgv7QhXADdxrgubRx35HgP0AengzNgV50WnQB9TDpoV95mtz4Den+7cfbgt+l4D9A7pYNVQpKjw5gR0Nv7Pbvyfrv1DOhtx3XGcfuO9y6A3iYdFJIcF8YMgF53t7ArW/+oHRpYvoMyR4ERAZoATQRoIkATAZoAbREI0ESAJgI0EaAJ0ESAJgI0EaCJAE319Avmf9xzcczOUgAAAABJRU5ErkJggg==")
+ICONE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><polygon fill="#D92732" points="32.0,5.0 38.8,24.6 59.6,25.0 43.0,37.6 49.0,57.5 32.0,45.6 15.0,57.5 21.0,37.6 4.4,25.0 25.2,24.6"/></svg>'
+
+
+@app.route("/favicon.svg")
+def favicon_svg():
+    return Response(ICONE_SVG, mimetype="image/svg+xml", headers={"Cache-Control": "public, max-age=604800"})
+
+
+@app.route("/favicon.ico")
+def favicon_ico():
+    return Response(ICONE48, mimetype="image/png", headers={"Cache-Control": "public, max-age=604800"})
+
+
+@app.route("/icone.png")
+def icone_png():
+    return Response(ICONE180, mimetype="image/png", headers={"Cache-Control": "public, max-age=604800"})
+
+
 @app.route("/logo/<path:nome>")
 def logo(nome):
     with db(8) as c:
@@ -717,6 +757,7 @@ def stream():
 
 PAGINA = r"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>__NOME__</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/png" sizes="48x48" href="/favicon.ico"><link rel="apple-touch-icon" href="/icone.png"><meta name="theme-color" content="#D92732">
 <style>
 :root{--blue:#1557A6;--yel:#F2C230;--bg:#f7f4ec;--tx:#171717;--mut:#5f5a52;--red:#D92732;--glass:rgba(255,255,255,.44);--edge:rgba(255,255,255,.5);--sh:rgba(160,30,55,.24);--pnl:rgba(255,255,255,.86);--b1:.5;--b2:.32;--b3:.42;--b4:.28}
 @media(prefers-color-scheme:dark){:root{--bg:#171717;--tx:#f6f3ec;--mut:#aaa59b;--red:#F0525D;--glass:rgba(255,255,255,.07);--edge:rgba(255,255,255,.11);--sh:rgba(0,0,0,.55);--pnl:rgba(30,30,30,.9);--b1:.28;--b2:.22;--b3:.2;--b4:.16}}
@@ -728,7 +769,7 @@ radial-gradient(34% 38% at 92% 14%,rgba(217,39,50,var(--b2)),transparent 70%),
 radial-gradient(42% 40% at 76% 90%,rgba(21,87,166,var(--b3)),transparent 70%),
 radial-gradient(38% 38% at 6% 84%,rgba(21,87,166,var(--b4)),transparent 70%)}
 body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
-.hero{position:relative;overflow:hidden}
+
 .art{position:absolute;inset:0;width:100%;height:100%;z-index:0;color:var(--tx)}
 .hw{position:relative;z-index:1;max-width:1360px;margin:auto;padding:16px 28px 14px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 28px}
 .kick{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
@@ -762,7 +803,7 @@ a.card>*{position:relative}a.card:hover{transform:translateY(-4px);box-shadow:0 
 .ph{width:100%;height:100%;display:grid;place-items:center;font-size:2.8rem;background:radial-gradient(circle at 50% 50%,var(--c0) 0%,var(--c1) 100%)}
 .cb{display:flex;flex-direction:column;gap:8px;padding:0 6px;flex:1}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.tag{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;white-space:nowrap;background:radial-gradient(ellipse at 50% 50%,var(--c0) 0%,var(--c1) 100%)}
+.tag{min-width:0;max-width:64%;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.04em;white-space:nowrap;background:radial-gradient(ellipse at 50% 50%,var(--c0) 0%,var(--c1) 100%)}
 .src{font-size:.7rem;font-weight:600;color:var(--mut);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 a.card h3{margin:0;font-size:1.1rem;line-height:1.15;letter-spacing:-.02em;font-weight:750}
 a.card p{margin:0;font-size:.85rem;line-height:1.38;color:var(--mut);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -773,22 +814,6 @@ a.card time{margin-top:auto;padding-top:6px;font-size:.68rem;letter-spacing:.08e
 #mais:hover{background:radial-gradient(ellipse at center,rgba(21,87,166,.9),rgba(21,87,166,.45));color:#fff}
 #fb{display:none;margin:6px 28px 0;padding:9px 18px;border:1px solid var(--edge);border-radius:99px;background:var(--glass);color:var(--tx);font-weight:700;font-size:.78rem}
 @media(max-width:860px){.layout{flex-direction:column;padding:12px 16px 50px;gap:18px}aside{display:none;width:100%;position:static}aside.open{display:block}#fb{display:inline-block;margin-left:16px}.hw{padding:14px 16px 10px}.grid{gap:20px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
-body{padding-bottom:118px}
-.radio{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:50;width:min(940px,calc(100% - 24px));display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:10px 16px;border-radius:28px;background:var(--pnl);border:1px solid var(--edge);backdrop-filter:blur(26px) saturate(1.6);-webkit-backdrop-filter:blur(26px) saturate(1.6);box-shadow:0 22px 54px -14px var(--sh),inset 0 1px 0 rgba(255,255,255,.45)}
-.rinfo{display:flex;align-items:center;gap:11px;flex:1 1 230px;min-width:0}
-.rdot{width:11px;height:11px;border-radius:50%;flex:none;background:radial-gradient(circle,var(--red) 30%,rgba(217,39,50,.25) 100%)}.radio.on .rdot{animation:p 1.4s infinite}
-.rinfo b{display:block;font-size:.9rem;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rinfo small{display:block;color:var(--mut);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase}
-.rband{display:flex;gap:4px;padding:3px;border-radius:99px;background:rgba(217,39,50,.09)}
-.rband button{border:0;border-radius:99px;padding:6px 13px;font-size:.72rem;font-weight:700;background:none;color:var(--tx);cursor:pointer}
-.rband button.on{background:radial-gradient(ellipse at center,rgba(21,87,166,.95),rgba(21,87,166,.5));color:#fff}
-.rctl{display:flex;align-items:center;gap:10px}
-#rplay{width:46px;height:46px;border-radius:50%;border:0;color:#fff;font-size:1rem;cursor:pointer;background:radial-gradient(circle at 35% 30%,#ff7a8c,rgba(217,39,50,.95) 60%,rgba(179,18,31,.72));box-shadow:0 8px 22px -6px rgba(217,39,50,.75)}
-#rmute{border:0;background:none;font-size:1.3rem;cursor:pointer;padding:4px;line-height:1}
-#rvol{width:120px;accent-color:var(--red)}
-#rmsg{flex-basis:100%;font-size:.76rem;color:var(--mut)}#rmsg:empty{display:none}
-#rlink{display:none;flex-basis:100%;font-size:.76rem;color:var(--red)}.radio.fb #rlink{display:block}
-#rfb{flex-basis:100%;height:96px;border:0;border-radius:16px}#rfb[hidden]{display:none}
-@media(max-width:620px){#rvol{width:84px}.rband{order:3}.radio{border-radius:22px;padding:10px 12px}}
 .orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
 .orbs i{position:absolute;left:0;top:0;width:calc(46vmax - var(--k) * 1.8vmax);aspect-ratio:1;border-radius:50%;opacity:calc(.92 - var(--k) * .1);background:radial-gradient(circle at 36% 32%,rgba(242,194,48,.85) 0%,rgba(217,39,50,.6) 36%,rgba(21,87,166,.25) 66%,rgba(21,87,166,0) 100%);animation:orb 64s ease-in-out infinite;animation-delay:calc((var(--k) - 7) * .9s);will-change:transform}
 @keyframes orb{0%,100%{transform:translate(calc(-50% + 8vw),calc(-50% + 20vh))}25%{transform:translate(calc(-50% + 64vw),calc(-50% + 6vh))}50%{transform:translate(calc(-50% + 92vw),calc(-50% + 58vh))}75%{transform:translate(calc(-50% + 36vw),calc(-50% + 94vh))}}
@@ -806,9 +831,44 @@ body{padding-bottom:118px}
 .manif.mob{display:none;max-width:1360px;margin:30px auto 0;padding:16px 28px 0}
 @media(max-width:860px){.manif.mob{display:block}aside .manif{display:none}}
 @media(max-height:640px){aside{position:static}}
+:root{--hdr:rgba(247,244,236,.76)}@media(prefers-color-scheme:dark){:root{--hdr:rgba(23,23,23,.76)}}
+.hero{position:sticky;top:0;z-index:60;background:var(--hdr);border-bottom:1px solid var(--edge);box-shadow:0 14px 34px -24px var(--sh)}
+.hero::before{content:"";position:absolute;inset:0;z-index:0;backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6)}
+.hw{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(250px,370px);grid-template-areas:"brand radio search";align-items:center;gap:10px 22px;padding:12px 28px}
+.hw>.brand{grid-area:brand}.hw>.radio{grid-area:radio;justify-self:center;width:100%;max-width:540px}.hw>.search{grid-area:search;width:100%}
+aside{top:calc(var(--hh,96px) + 14px)}
+.radio{position:relative;display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:99px;background:var(--glass);border:1px solid var(--edge);box-shadow:0 10px 30px -14px var(--sh),inset 0 1px 0 rgba(255,255,255,.45);backdrop-filter:blur(16px) saturate(1.5);-webkit-backdrop-filter:blur(16px) saturate(1.5);min-width:0}
+#rplay{width:42px;height:42px;flex:none;border-radius:50%;border:0;color:#fff;font-size:.95rem;cursor:pointer;background:radial-gradient(circle at 35% 30%,#ff7a8c,rgba(217,39,50,.95) 60%,rgba(140,20,30,.72));box-shadow:0 8px 20px -6px rgba(217,39,50,.7)}
+.rinfo{display:flex;align-items:center;gap:9px;flex:1 1 auto;min-width:0}
+.eq{display:flex;align-items:flex-end;gap:2px;height:16px;flex:none}.eq i{width:3px;height:5px;border-radius:2px;background:var(--red)}
+.radio.on .eq i{animation:eq 1s ease-in-out infinite}.radio.on .eq i:nth-child(2){animation-delay:-.4s}.radio.on .eq i:nth-child(3){animation-delay:-.75s}
+@keyframes eq{0%,100%{height:4px}50%{height:16px}}
+.rtxt{min-width:0}.rtxt b{display:block;font-size:.84rem;line-height:1.15;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rtxt small{display:block;font-size:.64rem;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rtxt small.alert{color:var(--red);font-weight:700}
+.rband{display:flex;gap:2px;padding:2px;border-radius:99px;background:rgba(21,87,166,.1);flex:none}
+.rband button{border:0;border-radius:99px;padding:5px 10px;font-size:.66rem;font-weight:700;background:none;color:var(--tx);cursor:pointer;white-space:nowrap}
+.rband button.on{background:radial-gradient(ellipse at center,rgba(21,87,166,.95),rgba(21,87,166,.5));color:#fff}
+.rvolw{display:flex;align-items:center;gap:4px;flex:none}
+#rmute{border:0;background:none;font-size:1.1rem;cursor:pointer;padding:4px;line-height:1;color:var(--tx)}
+#rvol{width:80px;accent-color:var(--red)}
+#rmin{width:28px;height:28px;flex:none;border-radius:50%;border:1px solid var(--edge);background:none;color:var(--tx);cursor:pointer;font-size:1rem;line-height:1}
+.radio button:focus-visible,.radio input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.radio.min .rband,.radio.min .rvolw{display:none}.radio.min{max-width:300px}
+.rfbwrap{display:none;position:absolute;top:calc(100% + 10px);right:0;width:min(420px,100%);padding:10px;border-radius:20px;background:var(--pnl);border:1px solid var(--edge);box-shadow:0 20px 50px -14px var(--sh);z-index:5}
+.radio.fb .rfbwrap{display:block}
+#rfb{display:block;width:100%;height:96px;border:0;border-radius:14px}#rfb[hidden]{display:none}
+#rlink{display:block;margin-top:8px;font-size:.74rem;color:var(--blue)}
+@media(prefers-reduced-motion:reduce){.radio.on .eq i{animation:none;height:10px}}
+@media(max-width:1199px){#rvol{display:none}}
+@media(max-width:959px){.hw{grid-template-columns:minmax(0,1fr) minmax(220px,340px);grid-template-areas:"brand search" "radio radio"}.hw>.radio{max-width:none;justify-self:stretch}#rvol{display:block}}
+@media(max-width:767px){.hw{grid-template-columns:1fr;grid-template-areas:"brand" "search";padding:10px 16px}h1{font-size:1.45rem}.kick{font-size:.62rem}
+ body{padding-bottom:86px}#rvol{display:none}.rband button{padding:5px 8px}
+ .hw>.radio{position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(560px,calc(100% - 20px));max-width:none;z-index:70;background:var(--pnl);justify-self:auto}
+ .radio.min{left:auto;right:10px;transform:none;width:auto}.radio.min .rtxt{display:none}
+ .rfbwrap{top:auto;bottom:calc(100% + 10px)}}
 </style></head><body>
 <div class="orbs" aria-hidden="true"><i style="--k:0"></i><i style="--k:1"></i><i style="--k:2"></i><i style="--k:3"></i><i style="--k:4"></i><i style="--k:5"></i><i style="--k:6"></i><i style="--k:7"></i></div>
-<header class="hero">
+<header class="hero" id="hdr">
 <svg class="art" viewBox="0 0 1200 140" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
 <defs>
 <radialGradient id="sp" cx=".34" cy=".3" r=".9"><stop offset="0" stop-color="#ffc2cf"/><stop offset=".45" stop-color="#f2506f" stop-opacity=".9"/><stop offset="1" stop-color="#b3121f" stop-opacity=".22"/></radialGradient>
@@ -822,8 +882,16 @@ body{padding-bottom:118px}
 <circle cx="1170" cy="128" r="46" fill="currentColor" opacity=".5" filter="url(#air)"/>
 <circle cx="880" cy="22" r="30" fill="#ff7a59" opacity=".7" filter="url(#air)"/>
 </svg>
-<div class="hw"><div><div class="kick"><span><span class="dot"></span>Ao vivo</span><span>Última atualização: <span id="upd">aguardando…</span></span></div>
+<div class="hw"><div class="brand"><div class="kick"><span><span class="dot"></span>Ao vivo</span><span>Última atualização: <span id="upd">aguardando…</span></span></div>
 <h1><span class="st">★</span> __NOME__</h1></div>
+<div id="radio" class="radio" role="region" aria-label="Rádio Nacional ao vivo">
+<button type="button" id="rplay" aria-label="Tocar">▶</button>
+<div class="rinfo"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><div class="rtxt"><b id="rnome">Rádio Nacional FM Brasília</b><small id="rsub">96,1 MHz · ao vivo</small></div></div>
+<div class="rband" role="group" aria-label="Emissora"><button type="button" data-r="fm" class="on">FM 96,1</button><button type="button" data-r="am">AM 980</button></div>
+<div class="rvolw"><button type="button" id="rmute" aria-label="Mudo">🔊</button><input id="rvol" type="range" min="0" max="100" value="70" aria-label="Volume"></div>
+<button type="button" id="rmin" aria-label="Minimizar player" aria-expanded="true" title="Minimizar">–</button>
+<div class="rfbwrap"><iframe id="rfb" hidden allow="autoplay" title="Rádio Nacional (player oficial da EBC)"></iframe><a id="rlink" href="https://radionacional.ebc.com.br" target="_blank" rel="noopener">Abrir o site da Rádio Nacional ↗</a></div>
+</div>
 <form class="search" onsubmit="return false"><input id="q" type="search" placeholder="Pesquisar notícias, temas ou portais…" autocomplete="off" aria-label="Pesquisar"><button type="button" id="x">Limpar</button></form></div>
 </header>
 <button id="fb">☰ Filtros</button>
@@ -831,16 +899,9 @@ body{padding-bottom:118px}
 <main><div class="bar"><h2 id="titulo">Todas as notícias</h2><span id="cont"></span></div><div class="grid" id="lista"></div><button id="mais">Carregar mais</button></main></div>
 <section class="manif mob"><i class="mbar"></i><b class="mt">Manifesto</b><p>Pindorama. Um agregador de cultura, ideias e informação que conecta diferentes nichos de interesse: política, sociedade, música, cinema, artes, literatura, ciência e tudo aquilo que ajuda a compreender o nosso tempo.</p><p>A proposta é ampliar o acesso a vozes, perspectivas e produções relevantes, com atenção especial ao pensamento brasileiro e à cultura nacional, sem perder de vista o que acontece no mundo. Um espaço plural, crítico e independente, que valoriza a diversidade de ideias, questiona o senso comum e aposta na vanguarda do pensar.</p><p class="ass">Pindorama.</p></section>
 <footer class="rodape">__NOME__ é um agregador de notícias: exibe apenas título, breve resumo e imagem de capa com crédito, sempre com link para a matéria original. Todo o conteúdo pertence aos respectivos autores e veículos.__CONTATO__</footer>
-<div id="radio" class="radio" role="region" aria-label="Rádio Nacional ao vivo">
-<div class="rinfo"><span class="rdot"></span><div><b id="rnome">Rádio Nacional FM Brasília</b><small id="rsub">96,1 MHz · ao vivo</small></div></div>
-<div class="rband"><button type="button" data-r="fm" class="on">FM 96,1</button><button type="button" data-r="am">AM 980</button></div>
-<div class="rctl"><button type="button" id="rplay" aria-label="Tocar">▶</button><button type="button" id="rmute" aria-label="Mudo">🔊</button><input id="rvol" type="range" min="0" max="100" value="70" aria-label="Volume"></div>
-<div id="rmsg"></div><a id="rlink" href="https://radionacional.ebc.com.br" target="_blank" rel="noopener">Abrir o site da Rádio Nacional ↗</a>
-<iframe id="rfb" hidden allow="autoplay" title="Rádio Nacional (player oficial da EBC)"></iframe>
-</div>
 <script>
-const CORES={"Política":"#D92732","Internacional":"#1557A6","Sociedade":"#F2C230","Música":"#E8782E","Cinema":"#171717","Entretenimento":"#8A3FA0","Artes":"#3F8F6B","Literatura":"#8B4A2B","Ciência":"#2A86B8","Filosofia":"#5B6573","Voluntariado":"#E5646B"};
-const ICO={"Política":"🏛️","Internacional":"🌍","Sociedade":"✊","Música":"🎵","Cinema":"🎬","Entretenimento":"🍿","Artes":"🎨","Literatura":"📚","Ciência":"🔬","Filosofia":"🦉","Voluntariado":"🤝"};
+const CORES={"Política":"#D92732","Internacional":"#1557A6","Pensamento e Sociedade":"#F2C230","Decolonial":"#9C3D1B","Meio Ambiente":"#3F8F4F","Identidade Brasileira":"#2A86B8","Música":"#E8782E","Cinema e Entretenimento":"#8A3FA0","Artes e Arquitetura":"#171717","Literatura":"#8B4A2B","Ciência e Tecnologia":"#12A0A0","Voluntariado":"#E5646B"};
+const ICO={"Política":"🏛️","Internacional":"🌍","Pensamento e Sociedade":"💭","Decolonial":"✊","Meio Ambiente":"🌿","Identidade Brasileira":"🌴","Música":"🎵","Cinema e Entretenimento":"🎬","Artes e Arquitetura":"🎨","Literatura":"📚","Ciência e Tecnologia":"🔬","Voluntariado":"🤝"};
 let logos=new Set(),selT=new Set(),selF=new Set(),pop=[],q="",ultimo=null,timer=null,bt=null,aberto=null,dados=null;
 const $=id=>document.getElementById(id),L=$("lista");
 const norm=t=>(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -908,43 +969,48 @@ es.onmessage=e=>{const n=JSON.parse(e.data),h=norm(n.titulo+" "+(n.resumo||"")+"
  clearTimeout(timer);timer=setTimeout(filtros,2000)};
 (async()=>{try{const r=await (await fetch("/api/filtros")).json();pop=r.populares||[];selT=new Set(pop);logos=new Set(r.logos||[])}catch(e){}go()})();
 setInterval(()=>{if(!aberto)filtros()},30000);
+const hdr=document.getElementById("hdr"),setHH=()=>document.documentElement.style.setProperty("--hh",hdr.offsetHeight+"px");
+setHH();if(window.ResizeObserver)new ResizeObserver(setHH).observe(hdr);else addEventListener("resize",setHH);
 (function(){
 const au=new Audio(),$r=id=>document.getElementById(id),ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}};
 let rid=ls("radioId")==="am"?"am":"fm",info=null,hls=null,tocando=false,fallback=false;
 au.preload="none";const v0=ls("radioVol");au.volume=v0==null?.7:Math.min(1,Math.max(0,(+v0||0)/100));au.muted=true;   // sempre começa no mudo: navegadores permitem autoplay mudo$r("rvol").value=Math.round(au.volume*100);
-const msg=t=>{$r("rmsg").textContent=t||""};
-const avisoMudo=()=>msg(tocando&&au.muted?"🔇 Rádio ao vivo no mudo. Clique em 🔇 para ligar o som.":"");
+let subPadrao="96,1 MHz · ao vivo";const msg=t=>{const s=$r("rsub");s.textContent=t||subPadrao;s.title=t||"";s.classList.toggle("alert",!!t)};
+const avisoMudo=()=>msg(tocando&&au.muted?"🔇 No mudo · toque no ícone para ouvir":"");
 function ui(){$r("rplay").textContent=tocando?"❚❚":"▶";$r("rplay").setAttribute("aria-label",tocando?"Pausar":"Tocar");
  $r("rmute").textContent=(au.muted||au.volume===0)?"🔇":"🔊";$r("radio").classList.toggle("on",tocando);
  document.querySelectorAll(".rband button").forEach(b=>b.classList.toggle("on",b.dataset.r===rid))}
 function pausar(){try{au.pause()}catch(e){}tocando=false;ui()}
 function embedOff(){fallback=false;$r("radio").classList.remove("fb");$r("rfb").hidden=true;$r("rfb").removeAttribute("src")}
 function usarEmbed(){if(fallback)return;fallback=true;pausar();const f=$r("rfb");f.src=(info&&info.embed)||"https://aovivo.ebc.com.br/embed-audio.html?emissora=radio-nacional-fm-de-brasilia";f.hidden=false;
- $r("radio").classList.add("fb");msg("Não foi possível usar o player próprio agora. Use o player oficial da EBC abaixo.")}
+ $r("radio").classList.add("fb");msg("Usando o player oficial da EBC")}
 function carregaHls(){return new Promise((ok,er)=>{if(window.Hls)return ok();const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js";s.onload=ok;s.onerror=er;document.head.appendChild(s)})}
 async function fonte(url,tipo){if(hls){hls.destroy();hls=null}
  if(tipo==="hls"&&!au.canPlayType("application/vnd.apple.mpegurl")){try{await carregaHls();if(!window.Hls||!Hls.isSupported())throw 0;hls=new Hls();hls.on(Hls.Events.ERROR,(e,d)=>{if(d&&d.fatal)usarEmbed()});hls.loadSource(url);hls.attachMedia(au);return}catch(e){usarEmbed();return}}
  au.src=url}
-async function carregar(id){rid=id;ls("radioId",id);pausar();embedOff();msg("Conectando à rádio…");
+async function carregar(id){rid=id;ls("radioId",id);pausar();embedOff();msg("Conectando…");
  try{info=await (await fetch("/api/radio/"+id)).json()}catch(e){info=null}
- $r("rnome").textContent=info?info.nome:"Rádio Nacional";$r("rsub").textContent=(info?info.freq:"")+" · ao vivo";
+ $r("rnome").textContent=info?info.nome:"Rádio Nacional";subPadrao=(info?info.freq:"")+" · ao vivo";if(!$r("rsub").classList.contains("alert"))$r("rsub").textContent=subPadrao;
  if(!info||!info.stream){usarEmbed();return false}
  await fonte(info.stream,info.tipo);if(!fallback)msg("");return !fallback}
 function aoVivo(){if(hls&&hls.liveSyncPosition){try{au.currentTime=hls.liveSyncPosition}catch(e){}}else if(!hls&&au.src){au.load()}}
 function tocar(){if(fallback||(!au.src&&!hls))return Promise.resolve();
  return au.play().then(()=>{tocando=true;ui();avisoMudo()}).catch(e=>{tocando=false;ui();if(e&&e.name==="NotAllowedError")throw e;usarEmbed()})}
 au.onerror=()=>usarEmbed();au.onplaying=()=>{tocando=true;ui();avisoMudo()};au.onpause=()=>{tocando=false;ui()};au.onwaiting=()=>{if(tocando)msg("Carregando…")};
-$r("rplay").onclick=()=>{if(fallback){msg("Use o player oficial da EBC abaixo.");return}
- if(tocando){pausar();ls("radioAuto","0")}else{ls("radioAuto","1");aoVivo();tocar().catch(()=>msg("O navegador bloqueou o áudio. Clique em ▶ de novo."))}};
+$r("rplay").onclick=()=>{if(fallback){msg("Use o player oficial abaixo");return}
+ if(tocando){pausar();ls("radioAuto","0")}else{ls("radioAuto","1");aoVivo();tocar().catch(()=>msg("Áudio bloqueado · clique em ▶"))}};
 $r("rmute").onclick=()=>{au.muted=!au.muted;ui();avisoMudo()};
 $r("rvol").oninput=e=>{au.volume=e.target.value/100;au.muted=false;ls("radioVol",e.target.value);ui();avisoMudo()};
 document.querySelectorAll(".rband button").forEach(b=>b.onclick=()=>{const id=b.dataset.r;if(id===rid&&!fallback)return;const era=tocando||ls("radioAuto")!=="0";
  carregar(id).then(ok=>{if(ok&&era){aoVivo();tocar().catch(()=>{})}})});
 async function iniciar(){ui();const ok=await carregar(rid);if(!ok||ls("radioAuto")==="0")return;
- try{await tocar()}catch(e){msg("▶ Toque em qualquer lugar da página para começar a ouvir a Rádio Nacional.");
+ try{await tocar()}catch(e){msg("▶ Toque na página para ouvir");
   const ev=["pointerdown","keydown"],go=x=>{if(tocando||ls("radioAuto")==="0"){ev.forEach(t=>document.removeEventListener(t,go,true));return}
    if(x.target.closest&&x.target.closest("#radio"))return;ev.forEach(t=>document.removeEventListener(t,go,true));aoVivo();tocar().catch(()=>{})};
   ev.forEach(t=>document.addEventListener(t,go,true))}}
+const mn=$r("rmin");function setMin(m){$r("radio").classList.toggle("min",m);mn.textContent=m?"+":"–";mn.setAttribute("aria-expanded",m?"false":"true");
+ mn.setAttribute("aria-label",m?"Expandir player":"Minimizar player");mn.title=m?"Expandir":"Minimizar";ls("radioMin",m?"1":"0")}
+mn.onclick=()=>setMin(!$r("radio").classList.contains("min"));setMin(ls("radioMin")==="1");
 iniciar()})();
 </script></body></html>
 """

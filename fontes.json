@@ -165,8 +165,8 @@
   "feeds": [
    "https://www.revistacontinente.com.br/feed/"
   ],
-  "categoria": "Sociedade",
-  "tema": "Sociedade"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "Papo de Homem",
@@ -174,8 +174,8 @@
   "feeds": [
    "https://www.papodehomem.com.br/feed/"
   ],
-  "categoria": "Sociedade",
-  "tema": "Sociedade"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "Gênero e Número",
@@ -183,8 +183,8 @@
   "feeds": [
    "https://www.generonumero.media/feed/"
   ],
-  "categoria": "Sociedade",
-  "tema": "Sociedade"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "Associação Brasileira de Antropologia",
@@ -192,15 +192,15 @@
   "feeds": [
    "https://portal.abant.org.br/feed/"
   ],
-  "categoria": "Sociedade",
-  "tema": "Sociedade"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "R@U – Antropologia UFSCar",
   "site": "https://www.rau.ufscar.br/",
   "feeds": [],
-  "categoria": "Sociedade",
-  "tema": "Sociedade"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "Monkeybuzz",
@@ -287,15 +287,15 @@
   "feeds": [
    "https://revistacinetica.com.br/feed/"
   ],
-  "categoria": "Cinema",
-  "tema": "Cinema"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Contracampo",
   "site": "https://www.contracampo.com.br/",
   "feeds": [],
-  "categoria": "Cinema",
-  "tema": "Cinema"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Cinematório",
@@ -303,15 +303,15 @@
   "feeds": [
    "https://www.cinematorio.com.br/feed/"
   ],
-  "categoria": "Cinema",
-  "tema": "Cinema"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "AdoroCinema",
   "site": "https://www.adorocinema.com/",
   "feeds": [],
-  "categoria": "Cinema",
-  "tema": "Cinema"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "ABC – Cinematografia",
@@ -319,15 +319,15 @@
   "feeds": [
    "https://www.abcine.org.br/feed/"
   ],
-  "categoria": "Cinema",
-  "tema": "Cinema"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Cineplayers",
   "site": "https://www.cineplayers.com/",
   "feeds": [],
-  "categoria": "Cinema",
-  "tema": "Cinema"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Plano Crítico",
@@ -335,8 +335,8 @@
   "feeds": [
    "https://www.planocritico.com/feed/"
   ],
-  "categoria": "Cinema",
-  "tema": "Cinema"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Portal Brasileiro de Cinema",
@@ -344,8 +344,8 @@
   "feeds": [
    "https://www.portalbrasileirodecinema.com.br/feed/"
   ],
-  "categoria": "Cinema",
-  "tema": "Cinema"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Jornal Nippak",
@@ -353,22 +353,22 @@
   "feeds": [
    "https://www.jornalnippak.com.br/feed/"
   ],
-  "categoria": "Entretenimento",
-  "tema": "Entretenimento"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Omelete",
   "site": "https://www.omelete.com.br/",
   "feeds": [],
-  "categoria": "Entretenimento",
-  "tema": "Entretenimento"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Jovem Nerd",
   "site": "https://www.jovemnerd.com.br/",
   "feeds": [],
-  "categoria": "Entretenimento",
-  "tema": "Entretenimento"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Papelpop",
@@ -376,8 +376,8 @@
   "feeds": [
    "https://www.papelpop.com/feed/"
   ],
-  "categoria": "Entretenimento",
-  "tema": "Entretenimento"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "Popload",
@@ -385,8 +385,8 @@
   "feeds": [
    "https://www.popload.com.br/feed/"
   ],
-  "categoria": "Entretenimento",
-  "tema": "Entretenimento"
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
  },
  {
   "nome": "seLecT",
@@ -394,8 +394,8 @@
   "feeds": [
    "https://www.select.art.br/feed/"
   ],
-  "categoria": "Artes",
-  "tema": "Artes"
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
  },
  {
   "nome": "ARTE!Brasileiros",
@@ -403,8 +403,8 @@
   "feeds": [
    "https://artebrasileiros.com.br/feed/"
   ],
-  "categoria": "Artes",
-  "tema": "Artes"
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
  },
  {
   "nome": "Dasartes",
@@ -412,8 +412,8 @@
   "feeds": [
    "https://dasartes.com.br/feed/"
   ],
-  "categoria": "Artes",
-  "tema": "Artes"
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
  },
  {
   "nome": "Prêmio PIPA",
@@ -421,29 +421,29 @@
   "feeds": [
    "https://www.premiopipa.com/feed/"
   ],
-  "categoria": "Artes",
-  "tema": "Artes"
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
  },
  {
   "nome": "ArchDaily Brasil",
   "site": "https://www.archdaily.com.br/br",
   "feeds": [],
-  "categoria": "Artes",
-  "tema": "Artes"
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
  },
  {
   "nome": "Itaú Cultural",
   "site": "https://www.itaucultural.org.br/",
   "feeds": [],
-  "categoria": "Artes",
-  "tema": "Artes"
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
  },
  {
   "nome": "Enciclopédia Itaú Cultural",
   "site": "https://enciclopedia.itaucultural.org.br/",
   "feeds": [],
-  "categoria": "Artes",
-  "tema": "Artes"
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
  },
  {
   "nome": "Instituto Inhotim",
@@ -451,8 +451,8 @@
   "feeds": [
    "https://www.inhotim.org.br/feed/"
   ],
-  "categoria": "Artes",
-  "tema": "Artes"
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
  },
  {
   "nome": "Quatro Cinco Um",
@@ -526,8 +526,8 @@
   "feeds": [
    "https://revistapesquisa.fapesp.br/feed/"
   ],
-  "categoria": "Ciência",
-  "tema": "Ciência"
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
  },
  {
   "nome": "Ciência Hoje",
@@ -535,15 +535,15 @@
   "feeds": [
    "https://cienciahoje.org.br/feed/"
   ],
-  "categoria": "Ciência",
-  "tema": "Ciência"
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
  },
  {
   "nome": "ComCiência",
   "site": "https://www.comciencia.br/",
   "feeds": [],
-  "categoria": "Ciência",
-  "tema": "Ciência"
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
  },
  {
   "nome": "Agência Bori",
@@ -551,8 +551,8 @@
   "feeds": [
    "https://abori.com.br/feed/"
   ],
-  "categoria": "Ciência",
-  "tema": "Ciência"
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
  },
  {
   "nome": "Revista Galileu",
@@ -560,29 +560,29 @@
   "feeds": [
    "https://revistagalileu.globo.com/rss/ultimas/feed.xml"
   ],
-  "categoria": "Ciência",
-  "tema": "Ciência"
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
  },
  {
   "nome": "National Geographic Brasil",
   "site": "https://www.nationalgeographicbrasil.com/",
   "feeds": [],
-  "categoria": "Ciência",
-  "tema": "Ciência"
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
  },
  {
   "nome": "IHU Unisinos",
   "site": "https://www.ihu.unisinos.br/",
   "feeds": [],
-  "categoria": "Ciência",
-  "tema": "Ciência"
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
  },
  {
   "nome": "SciELO",
   "site": "https://www.scielo.br/",
   "feeds": [],
-  "categoria": "Ciência",
-  "tema": "Ciência"
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
  },
  {
   "nome": "ANPOF",
@@ -590,36 +590,36 @@
   "feeds": [
    "https://anpof.org.br/feed/"
   ],
-  "categoria": "Filosofia",
-  "tema": "Filosofia"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "Boitempo Editorial",
   "site": "https://www.boitempoeditorial.com.br/",
   "feeds": [],
-  "categoria": "Filosofia",
-  "tema": "Filosofia"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "Revista Discurso – USP",
   "site": "https://www.revistas.usp.br/filosofia",
   "feeds": [],
-  "categoria": "Filosofia",
-  "tema": "Filosofia"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "Filosofia – UERJ",
   "site": "https://www.filosofia.uerj.br/",
   "feeds": [],
-  "categoria": "Filosofia",
-  "tema": "Filosofia"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "Rapsódia",
   "site": "https://www.revistas.usp.br/rapsodia",
   "feeds": [],
-  "categoria": "Filosofia",
-  "tema": "Filosofia"
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
  },
  {
   "nome": "Atados",
@@ -665,5 +665,249 @@
   ],
   "categoria": "Voluntariado",
   "tema": "Voluntariado"
+ },
+ {
+  "nome": "Antena 1",
+  "site": "https://www.antena1.com.br",
+  "feeds": [],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Billboard Brasil",
+  "site": "https://billboard.com.br",
+  "feeds": [
+   "https://billboard.com.br/feed/"
+  ],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Rolling Stone Brasil",
+  "site": "https://rollingstone.com.br",
+  "feeds": [
+   "https://rollingstone.com.br/feed/"
+  ],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Letras.mus.br",
+  "site": "https://www.letras.mus.br",
+  "feeds": [],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Observatório do Cinema",
+  "site": "https://observatoriodocinema.com.br",
+  "feeds": [
+   "https://observatoriodocinema.com.br/feed/"
+  ],
+  "categoria": "Cinema e Entretenimento",
+  "tema": "Cinema e Entretenimento"
+ },
+ {
+  "nome": "Núcleo Jornalismo",
+  "site": "https://nucleo.jor.br/",
+  "feeds": [
+   "https://nucleo.jor.br/feed/"
+  ],
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
+ },
+ {
+  "nome": "ITS Rio",
+  "site": "https://itsrio.org/pt/",
+  "feeds": [
+   "https://itsrio.org/pt/feed/"
+  ],
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
+ },
+ {
+  "nome": "Convergência Digital",
+  "site": "https://convergenciadigital.com.br/",
+  "feeds": [
+   "https://convergenciadigital.com.br/feed/"
+  ],
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
+ },
+ {
+  "nome": "Por Aqui",
+  "site": "https://poraque.jor.br/",
+  "feeds": [
+   "https://poraque.jor.br/feed/"
+  ],
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
+ },
+ {
+  "nome": "Tecnoblog",
+  "site": "https://tecnoblog.net/",
+  "feeds": [
+   "https://tecnoblog.net/feed/"
+  ],
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
+ },
+ {
+  "nome": "TecMundo",
+  "site": "https://www.tecmundo.com.br",
+  "feeds": [
+   "https://rss.tecmundo.com.br/feed"
+  ],
+  "categoria": "Ciência e Tecnologia",
+  "tema": "Ciência e Tecnologia"
+ },
+ {
+  "nome": "Revista Mana",
+  "site": "https://revista-mana.org",
+  "feeds": [
+   "https://revista-mana.org/feed/"
+  ],
+  "categoria": "Pensamento e Sociedade",
+  "tema": "Pensamento e Sociedade"
+ },
+ {
+  "nome": "Caipora",
+  "site": "https://caipora.org",
+  "feeds": [
+   "https://caipora.org/feed/"
+  ],
+  "categoria": "Decolonial",
+  "tema": "Decolonial"
+ },
+ {
+  "nome": "Nonada",
+  "site": "https://www.nonada.com.br",
+  "feeds": [
+   "https://www.nonada.com.br/feed/"
+  ],
+  "categoria": "Decolonial",
+  "tema": "Decolonial"
+ },
+ {
+  "nome": "Instituto Socioambiental",
+  "site": "https://www.socioambiental.org",
+  "feeds": [],
+  "categoria": "Decolonial",
+  "tema": "Decolonial"
+ },
+ {
+  "nome": "Amazônia Real",
+  "site": "https://amazoniareal.com.br",
+  "feeds": [
+   "https://amazoniareal.com.br/feed/"
+  ],
+  "categoria": "Decolonial",
+  "tema": "Decolonial"
+ },
+ {
+  "nome": "Alma Preta",
+  "site": "https://almapreta.com.br",
+  "feeds": [
+   "https://almapreta.com.br/feed/"
+  ],
+  "categoria": "Decolonial",
+  "tema": "Decolonial"
+ },
+ {
+  "nome": "((o))eco",
+  "site": "https://oeco.org.br",
+  "feeds": [
+   "https://oeco.org.br/feed/"
+  ],
+  "categoria": "Meio Ambiente",
+  "tema": "Meio Ambiente"
+ },
+ {
+  "nome": "InfoAmazonia",
+  "site": "https://infoamazonia.org",
+  "feeds": [
+   "https://infoamazonia.org/feed/"
+  ],
+  "categoria": "Meio Ambiente",
+  "tema": "Meio Ambiente"
+ },
+ {
+  "nome": "Mongabay Brasil",
+  "site": "https://brasil.mongabay.com",
+  "feeds": [
+   "https://brasil.mongabay.com/feed/"
+  ],
+  "categoria": "Meio Ambiente",
+  "tema": "Meio Ambiente"
+ },
+ {
+  "nome": "Sumaúma",
+  "site": "https://sumauma.com",
+  "feeds": [
+   "https://sumauma.com/feed/"
+  ],
+  "categoria": "Meio Ambiente",
+  "tema": "Meio Ambiente"
+ },
+ {
+  "nome": "Projeto Colabora",
+  "site": "https://projetocolabora.com.br",
+  "feeds": [
+   "https://projetocolabora.com.br/feed/"
+  ],
+  "categoria": "Meio Ambiente",
+  "tema": "Meio Ambiente"
+ },
+ {
+  "nome": "Repórter Brasil",
+  "site": "https://reporterbrasil.org.br",
+  "feeds": [
+   "https://reporterbrasil.org.br/feed/"
+  ],
+  "categoria": "Meio Ambiente",
+  "tema": "Meio Ambiente"
+ },
+ {
+  "nome": "Museu da Pessoa",
+  "site": "https://museudapessoa.org",
+  "feeds": [
+   "https://museudapessoa.org/feed/"
+  ],
+  "categoria": "Identidade Brasileira",
+  "tema": "Identidade Brasileira"
+ },
+ {
+  "nome": "IPHAN",
+  "site": "https://www.gov.br/iphan/pt-br",
+  "feeds": [
+   "https://www.gov.br/iphan/pt-br/assuntos/noticias/RSS"
+  ],
+  "categoria": "Identidade Brasileira",
+  "tema": "Identidade Brasileira"
+ },
+ {
+  "nome": "Caos Planejado",
+  "site": "https://caosplanejado.com",
+  "feeds": [
+   "https://caosplanejado.com/feed/"
+  ],
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
+ },
+ {
+  "nome": "Vitruvius",
+  "site": "https://vitruvius.com.br/revistas",
+  "feeds": [],
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
+ },
+ {
+  "nome": "Revista ZUM",
+  "site": "https://revistazum.com.br",
+  "feeds": [
+   "https://revistazum.com.br/feed/"
+  ],
+  "categoria": "Artes e Arquitetura",
+  "tema": "Artes e Arquitetura"
  }
 ]
