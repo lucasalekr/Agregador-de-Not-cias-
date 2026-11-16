@@ -799,6 +799,13 @@ body{padding-bottom:118px}
 .ln{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#171717;text-align:center;padding:0 10px}.neg .ln{color:#fff}
 .cr{position:absolute;left:0;right:0;bottom:0;padding:16px 9px 5px;font-size:.62rem;line-height:1.2;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.62));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.6)}
 .rodape{max-width:1360px;margin:34px auto 0;padding:0 28px 10px;font-size:.74rem;line-height:1.5;color:var(--mut)}.rodape a{color:var(--blue)}
+.manif{margin-top:20px;padding-top:16px;border-top:1px solid var(--edge);font-size:.76rem;line-height:1.5;color:var(--mut)}
+.manif .mbar{display:block;width:30px;height:4px;border-radius:4px;background:var(--yel);margin-bottom:9px}
+.manif .mt{display:block;margin-bottom:8px;font-size:.86rem;letter-spacing:-.01em;color:var(--tx)}
+.manif p{margin:0 0 9px}.manif .ass{margin:12px 0 0;font-weight:800;font-size:.86rem;color:var(--red)}
+.manif.mob{display:none;max-width:1360px;margin:30px auto 0;padding:16px 28px 0}
+@media(max-width:860px){.manif.mob{display:block}aside .manif{display:none}}
+@media(max-height:640px){aside{position:static}}
 </style></head><body>
 <div class="orbs" aria-hidden="true"><i style="--k:0"></i><i style="--k:1"></i><i style="--k:2"></i><i style="--k:3"></i><i style="--k:4"></i><i style="--k:5"></i><i style="--k:6"></i><i style="--k:7"></i></div>
 <header class="hero">
@@ -820,8 +827,9 @@ body{padding-bottom:118px}
 <form class="search" onsubmit="return false"><input id="q" type="search" placeholder="Pesquisar notícias, temas ou portais…" autocomplete="off" aria-label="Pesquisar"><button type="button" id="x">Limpar</button></form></div>
 </header>
 <button id="fb">☰ Filtros</button>
-<div class="layout"><aside id="side"><h3>Eixos temáticos</h3><div class="dd" id="ddt"></div><h3>Portais</h3><div class="dd" id="ddf"></div></aside>
+<div class="layout"><aside id="side"><h3>Eixos temáticos</h3><div class="dd" id="ddt"></div><h3>Portais</h3><div class="dd" id="ddf"></div><section class="manif"><i class="mbar"></i><b class="mt">Manifesto</b><p>Pindorama. Um agregador de cultura, ideias e informação que conecta diferentes nichos de interesse: política, sociedade, música, cinema, artes, literatura, ciência e tudo aquilo que ajuda a compreender o nosso tempo.</p><p>A proposta é ampliar o acesso a vozes, perspectivas e produções relevantes, com atenção especial ao pensamento brasileiro e à cultura nacional, sem perder de vista o que acontece no mundo. Um espaço plural, crítico e independente, que valoriza a diversidade de ideias, questiona o senso comum e aposta na vanguarda do pensar.</p><p class="ass">Pindorama.</p></section></aside>
 <main><div class="bar"><h2 id="titulo">Todas as notícias</h2><span id="cont"></span></div><div class="grid" id="lista"></div><button id="mais">Carregar mais</button></main></div>
+<section class="manif mob"><i class="mbar"></i><b class="mt">Manifesto</b><p>Pindorama. Um agregador de cultura, ideias e informação que conecta diferentes nichos de interesse: política, sociedade, música, cinema, artes, literatura, ciência e tudo aquilo que ajuda a compreender o nosso tempo.</p><p>A proposta é ampliar o acesso a vozes, perspectivas e produções relevantes, com atenção especial ao pensamento brasileiro e à cultura nacional, sem perder de vista o que acontece no mundo. Um espaço plural, crítico e independente, que valoriza a diversidade de ideias, questiona o senso comum e aposta na vanguarda do pensar.</p><p class="ass">Pindorama.</p></section>
 <footer class="rodape">__NOME__ é um agregador de notícias: exibe apenas título, breve resumo e imagem de capa com crédito, sempre com link para a matéria original. Todo o conteúdo pertence aos respectivos autores e veículos.__CONTATO__</footer>
 <div id="radio" class="radio" role="region" aria-label="Rádio Nacional ao vivo">
 <div class="rinfo"><span class="rdot"></span><div><b id="rnome">Rádio Nacional FM Brasília</b><small id="rsub">96,1 MHz · ao vivo</small></div></div>
