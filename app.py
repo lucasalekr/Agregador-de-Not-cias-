@@ -23,8 +23,8 @@ def _pasta_gravavel():
 
 
 DB = os.path.join(_pasta_gravavel(), "noticias.db")
-INTERVALO = int(os.environ.get("INTERVALO_SEGUNDOS", "120"))   # checa as fontes a cada 2 min
-NOME_SITE = os.environ.get("NOME_SITE", "Meu Portal de Notícias")
+INTERVALO = int(os.environ.get("INTERVALO_SEGUNDOS", "300"))   # checa as fontes a cada 2 min
+NOME_SITE = os.environ.get("NOME_SITE", "Pindorama")
 AGENTE = "PortalNoticiasBot/1.0 (agregador; respeita robots.txt)"
 
 app = Flask(__name__)
@@ -59,7 +59,7 @@ def iniciar_banco():
             id INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT UNIQUE, hash_titulo TEXT,
             titulo TEXT, resumo TEXT, link TEXT, imagem TEXT, fonte TEXT,
             categoria TEXT, publicado INTEGER)""")
-        for coluna in ("tema", "busca"):
+        for coluna in ("tema", "busca", "credito"):
             try:
                 c.execute(f"ALTER TABLE noticias ADD COLUMN {coluna} TEXT")
             except sqlite3.OperationalError:
@@ -67,6 +67,7 @@ def iniciar_banco():
         c.execute("CREATE INDEX IF NOT EXISTS i_pub ON noticias(publicado DESC)")
         c.execute("CREATE INDEX IF NOT EXISTS i_fonte ON noticias(fonte)")
         c.execute("CREATE INDEX IF NOT EXISTS i_tema ON noticias(tema)")
+        c.execute("CREATE TABLE IF NOT EXISTS logos(nome TEXT PRIMARY KEY, tipo TEXT, dados BLOB)")
         c.execute("CREATE TABLE IF NOT EXISTS acessos(tema TEXT PRIMARY KEY, total INTEGER DEFAULT 0)")
         c.execute("CREATE TABLE IF NOT EXISTS controle(url TEXT PRIMARY KEY, etag TEXT, modified TEXT)")
         c.execute("CREATE TABLE IF NOT EXISTS estado(nome TEXT PRIMARY KEY, feed_url TEXT, tentativa INTEGER, ultima INTEGER, status TEXT)")
@@ -83,16 +84,130 @@ def link_limpo(url):
     return urlunsplit((p.scheme, p.netloc.lower(), p.path.rstrip("/"), "", ""))
 
 
+DIAS_RETENCAO = int(os.environ.get("DIAS_RETENCAO", "30"))      # por quantos dias guardar as notícias
+MAX_NOTICIAS = int(os.environ.get("MAX_NOTICIAS", "4000"))      # limite total de notícias guardadas
+EMAIL_CONTATO = os.environ.get("EMAIL_CONTATO", "")             # e-mail para pedidos de remoção (aparece no rodapé)
+
+_PT = set("não uma são foi com mais das ao pelo pela nas isso também já após tem seu sua ou mas aos às um em da e".split())
+_EN = set("the and of to is for with that are this by from has was will new after about his her you they have not but on in".split())
+_ES = set("los las del el y es su sus pero más también donde cuando hay fue una con".split())
+_FR = set("le les des du une et est pour dans qui sur pas plus avec au aux ce cette sont".split())
+
+
+def idioma_ok(texto):
+    """False quando o texto parece estar em inglês, espanhol ou francês (o portal é em português)."""
+    pal = re.findall(r"[a-záéíóúâêôãõçàüñ']+", (texto or "").lower())
+    if len(pal) < 5:
+        return True
+    pt = sum(p in _PT for p in pal)
+    fora = max(sum(p in s for p in pal) for s in (_EN, _ES, _FR))
+    return not (fora >= 2 and fora > pt)
+
+
+def https(u):
+    return "https://" + u[7:] if u and u.startswith("http://") else u
+
+
 def achar_imagem(e):
+    cand = []
     for chave in ("media_thumbnail", "media_content"):
         for m in e.get(chave, []) or []:
-            if m.get("url"):
-                return m["url"]
+            if m.get("url") and "video" not in str(m.get("type", "")):
+                cand.append(m["url"])
     for l in e.get("links", []):
         if l.get("rel") == "enclosure" and str(l.get("type", "")).startswith("image"):
-            return l.get("href")
-    m = re.search(r'<img[^>]+src="([^"]+)"', (e.get("summary", "") or "")[:4000])
-    return m.group(1) if m else None
+            cand.append(l.get("href"))
+    im = e.get("image")
+    if isinstance(im, dict):
+        cand.append(im.get("href") or im.get("url"))
+    blocos = [(e.get("summary") or "")[:4000]] + [(c.get("value") or "")[:8000] for c in e.get("content", []) or []]
+    for b in blocos:
+        m = re.search(r'<img[^>]+(?:data-src|src)="([^"]+)"', b)
+        if m:
+            cand.append(unescape(m.group(1)))
+    for u in cand:
+        if u and u.startswith(("http://", "https://")) and not re.search(r"pixel|spacer|1x1|\.gif(\?|$)|feedburner|/emoji", u, re.I):
+            return https(u)
+    return None
+
+
+def achar_credito(e, fonte):
+    for chave in ("media_credit", "media_copyright"):
+        v = e.get(chave)
+        if isinstance(v, list) and v:
+            v = v[0]
+        if isinstance(v, dict):
+            v = v.get("content")
+        if isinstance(v, str) and len(v.strip()) > 1:
+            return "Foto: " + limpar(v, 70)
+    blocos = " ".join([(e.get("summary") or "")[:4000]] + [(c.get("value") or "")[:8000] for c in e.get("content", []) or []])
+    m = re.search(r"(?:Foto|Fotografia|Imagem|Cr[eé]dito)s?(?:\s+d[ae]\s+(?:capa|divulga[cç][aã]o))?\s*[:\-–]\s*([^<\n|]{2,70})", blocos, re.I)
+    if m and len(m.group(1).strip()) > 1:
+        return "Foto: " + limpar(m.group(1), 60)
+    return "Imagem: " + fonte
+
+
+def og_image(url):
+    """Quando o feed não traz imagem, procura a imagem de capa na própria matéria."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": AGENTE})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            html = r.read(80000).decode("utf-8", "ignore")
+    except Exception:
+        return None
+    for pat in (r'<meta[^>]+property=["\']og:image(?::secure_url)?["\'][^>]*content=["\']([^"\']+)',
+                r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image',
+                r'<meta[^>]+name=["\']twitter:image["\'][^>]*content=["\']([^"\']+)'):
+        m = re.search(pat, html, re.I)
+        if m:
+            return https(urljoin(url, unescape(m.group(1))))
+    return None
+
+
+_LOGO_TENT = {}
+
+
+def garantir_logo(f):
+    """Guarda o logo (ícone) do portal para usar quando a matéria não tem imagem."""
+    nome = f["nome"]
+    with db(8) as c:
+        if c.execute("SELECT 1 FROM logos WHERE nome=?", (nome,)).fetchone():
+            return
+    if time.time() - _LOGO_TENT.get(nome, 0) < 86400:
+        return
+    _LOGO_TENT[nome] = time.time()
+    try:
+        html = baixar(f["site"], 10)
+    except Exception:
+        html = ""
+    cand = []
+    for tag in re.findall(r"<link[^>]+>", html, re.I):
+        if re.search(r'rel=["\'][^"\']*icon', tag, re.I):
+            h = re.search(r'href=["\']([^"\']+)', tag, re.I)
+            if h:
+                t = re.search(r'sizes=["\'](\d+)', tag, re.I)
+                peso = int(t.group(1)) if t else (512 if "any" in tag.lower() else (180 if "apple" in tag.lower() else 32))
+                cand.append((peso, urljoin(f["site"], unescape(h.group(1)))))
+    cand = [u for _, u in sorted(cand, reverse=True)] + [urljoin(f["site"], "/favicon.ico")]
+    for u in cand[:4]:
+        try:
+            req = urllib.request.Request(u, headers={"User-Agent": AGENTE})
+            with urllib.request.urlopen(req, timeout=8) as r:
+                dados, tipo = r.read(200001), r.headers.get_content_type()
+            if 100 < len(dados) <= 200000 and (tipo.startswith("image/") or u.endswith(".ico")):
+                with ESCRITA, db() as c:
+                    c.execute("INSERT OR REPLACE INTO logos(nome,tipo,dados) VALUES(?,?,?)",
+                              (nome, tipo if tipo.startswith("image/") else "image/x-icon", dados))
+                return
+        except Exception:
+            continue
+
+
+def limpar_antigas():
+    corte = int(time.time()) - DIAS_RETENCAO * 86400
+    with ESCRITA, db() as c:
+        c.execute("DELETE FROM noticias WHERE publicado<?", (corte,))
+        c.execute("DELETE FROM noticias WHERE id NOT IN (SELECT id FROM noticias ORDER BY publicado DESC LIMIT ?)", (MAX_NOTICIAS,))
 
 
 import unicodedata
@@ -110,6 +225,10 @@ TEMAS = {
  "Literatura": "livro* literatur* escritor* escritora romance poesia poema* poet* autor* autora editora ensaio* resenha conto* leitura prosa",
  "Ciência": "ciencia* cientist* pesquisa* universo astronom* espaco nasa biolog* fisica quimica tecnologia inteligencia artificial ia algoritm* internet dinossauro* descobert* planeta cerebro",
 }
+
+
+TEMAS["Filosofia"] = "filosofia filosof* etica metafisica epistemologia ontologia fenomenologia kant hegel nietzsche marx* heidegger foucault pensador* dialetica"
+TEMAS["Voluntariado"] = "voluntari* doacao doacoes doar solidariedade ong ongs mutirao caridade filantrop* comunitari* humanitari*"
 
 
 def _norm(t):
@@ -238,26 +357,41 @@ def coletar_fonte(f):
         estado(f["nome"], status="feed falhou (será redescoberto)", feed_url=None, tentativa=agora)
         return 0
     novas = 0
+    pend = []
     with ESCRITA, db() as c:
-        for e in d.entries[:25]:
+        for e in d.entries[:20]:
             link, titulo = e.get("link"), limpar(e.get("title"), 250)
             if not link or not titulo:
                 continue
+            if not idioma_ok(titulo + " " + limpar(e.get("summary"), 400)):
+                continue                      # matéria em língua estrangeira
             h = hashlib.sha1(link_limpo(link).encode()).hexdigest()
             ht = hashlib.sha1(re.sub(r"\W+", "", titulo.lower()).encode()).hexdigest()
             if c.execute("SELECT 1 FROM noticias WHERE hash=? OR hash_titulo=?", (h, ht)).fetchone():
                 continue
             t = e.get("published_parsed") or e.get("updated_parsed")
             pub = min(timegm(t), agora) if t else agora
-            cur = c.execute("""INSERT OR IGNORE INTO noticias(hash,hash_titulo,titulo,resumo,link,imagem,fonte,categoria,publicado,tema,busca)
-                         VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
-                      (h, ht, titulo, limpar(e.get("summary")), link, achar_imagem(e),
+            if pub < agora - DIAS_RETENCAO * 86400:
+                continue                      # mais antiga que o período de guarda
+            img = achar_imagem(e)
+            cur = c.execute("""INSERT OR IGNORE INTO noticias(hash,hash_titulo,titulo,resumo,link,imagem,fonte,categoria,publicado,tema,busca,credito)
+                         VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                      (h, ht, titulo, limpar(e.get("summary")), link, img,
                        f["nome"], f.get("categoria", "Geral"), pub,
                        classificar(titulo, limpar(e.get("summary")), f.get("tema")),
-                       _norm(titulo + " " + limpar(e.get("summary")) + " " + f["nome"])))
+                       _norm(titulo + " " + limpar(e.get("summary")) + " " + f["nome"]),
+                       achar_credito(e, f["nome"])))
             novas += cur.rowcount
+            if cur.rowcount and not img:
+                pend.append((cur.lastrowid, link))
         c.execute("INSERT OR REPLACE INTO controle VALUES(?,?,?)",
                   (feed, getattr(d, "etag", None), getattr(d, "modified", None)))
+    for rid, lk in pend[:3]:                  # imagem de capa direto da matéria (poucas por rodada)
+        im = og_image(lk)
+        if im:
+            with ESCRITA, db() as c2:
+                c2.execute("UPDATE noticias SET imagem=?, credito=? WHERE id=?", (im, "Imagem: " + f["nome"], rid))
+    garantir_logo(f)
     estado(f["nome"], status="OK", ultima=agora)
     return novas
 
@@ -293,6 +427,10 @@ def _loop_coleta_interno():
                 list(ex.map(coletar_seguro, fontes))
         except Exception as erro:
             print("Erro no ciclo de coleta:", erro)
+        try:
+            limpar_antigas()
+        except Exception as erro:
+            print("Erro ao limpar notícias antigas:", erro)
         time.sleep(INTERVALO)
 
 
@@ -491,6 +629,15 @@ def api_radio(id_):
     return jsonify(nome=r["nome"], freq=r["freq"], stream=url, tipo=tipo, embed=EMBED_EBC + r["slug"])
 
 
+@app.route("/logo/<path:nome>")
+def logo(nome):
+    with db(8) as c:
+        r = c.execute("SELECT tipo,dados FROM logos WHERE nome=?", (nome,)).fetchone()
+    if not r:
+        return "", 404
+    return Response(r["dados"], mimetype=r["tipo"], headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.route("/api/clique", methods=["POST"])
 def api_clique():
     """Conta cliques por tema para saber os temas mais acessados."""
@@ -534,13 +681,14 @@ def api_filtros():
     with db(8) as c:
         temas, fontes = cont("tema", "fonte", fonte), cont("fonte", "tema", tema)
         ult = c.execute("SELECT MAX(ultima) FROM estado").fetchone()[0]
+        logos = [r[0] for r in c.execute("SELECT nome FROM logos")]
         pop = [r["tema"] for r in c.execute("SELECT tema FROM acessos WHERE total>0 ORDER BY total DESC LIMIT 3")]
         for r in c.execute("SELECT tema FROM noticias WHERE tema IS NOT NULL GROUP BY tema ORDER BY COUNT(*) DESC"):
             if len(pop) >= 3:
                 break
             if r["tema"] not in pop:
                 pop.append(r["tema"])
-    return jsonify(temas=temas, fontes=fontes, atualizado=ULTIMA["t"] or ult, populares=pop)
+    return jsonify(temas=temas, fontes=fontes, atualizado=ULTIMA["t"] or ult, populares=pop, logos=logos)
 
 
 @app.route("/stream")
@@ -570,16 +718,15 @@ def stream():
 PAGINA = r"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>__NOME__</title>
 <style>
-:root{--bg:#fcf3f1;--tx:#1b1215;--mut:#6c5b60;--red:#e0201f;--glass:rgba(255,255,255,.44);--edge:rgba(255,255,255,.5);--sh:rgba(160,30,55,.24);--pnl:rgba(255,255,255,.86);--b1:.5;--b2:.32;--b3:.42;--b4:.28}
-@media(prefers-color-scheme:dark){:root{--bg:#120a0d;--tx:#f8edef;--mut:#b6a3a8;--red:#ff4a3d;--glass:rgba(255,255,255,.07);--edge:rgba(255,255,255,.11);--sh:rgba(0,0,0,.55);--pnl:rgba(34,22,27,.88);--b1:.28;--b2:.22;--b3:.2;--b4:.16}}
+:root{--blue:#1557A6;--yel:#F2C230;--bg:#f7f4ec;--tx:#171717;--mut:#5f5a52;--red:#D92732;--glass:rgba(255,255,255,.44);--edge:rgba(255,255,255,.5);--sh:rgba(160,30,55,.24);--pnl:rgba(255,255,255,.86);--b1:.5;--b2:.32;--b3:.42;--b4:.28}
+@media(prefers-color-scheme:dark){:root{--bg:#171717;--tx:#f6f3ec;--mut:#aaa59b;--red:#F0525D;--glass:rgba(255,255,255,.07);--edge:rgba(255,255,255,.11);--sh:rgba(0,0,0,.55);--pnl:rgba(30,30,30,.9);--b1:.28;--b2:.22;--b3:.2;--b4:.16}}
 *{box-sizing:border-box}html{background:var(--bg)}
 body{margin:0;color:var(--tx);font:16px/1.4 "SF Pro Display","Inter","Segoe UI",system-ui,"Helvetica Neue",Arial,sans-serif;min-height:100vh}
-body::before{content:"";position:fixed;inset:-12%;z-index:-2;filter:blur(36px);background:
-radial-gradient(38% 34% at 10% 8%,rgba(255,110,135,var(--b1)),transparent 70%),
-radial-gradient(34% 40% at 90% 16%,rgba(224,32,31,var(--b2)),transparent 70%),
-radial-gradient(44% 40% at 72% 88%,rgba(255,165,115,var(--b3)),transparent 70%),
-radial-gradient(40% 40% at 6% 82%,rgba(185,120,255,var(--b4)),transparent 70%),
-radial-gradient(30% 30% at 48% 45%,rgba(255,190,200,calc(var(--b1) * .5)),transparent 70%)}
+body::before{content:"";position:fixed;inset:-12%;z-index:-2;filter:blur(40px);background:
+radial-gradient(36% 32% at 8% 8%,rgba(242,194,48,calc(var(--b1) * .9)),transparent 70%),
+radial-gradient(34% 38% at 92% 14%,rgba(217,39,50,var(--b2)),transparent 70%),
+radial-gradient(42% 40% at 76% 90%,rgba(21,87,166,var(--b3)),transparent 70%),
+radial-gradient(38% 38% at 6% 84%,rgba(21,87,166,var(--b4)),transparent 70%)}
 body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 .hero{position:relative;overflow:hidden}
 .art{position:absolute;inset:0;width:100%;height:100%;z-index:0;color:var(--tx)}
@@ -589,7 +736,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 h1{margin:4px 0 0;font-weight:800;font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1;letter-spacing:-.035em}h1 .st{color:var(--red)}
 .search{display:flex;width:min(470px,100%);border-radius:99px;background:var(--glass);border:1px solid var(--edge);backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);box-shadow:0 10px 30px -12px var(--sh),inset 0 1px 0 rgba(255,255,255,.4);padding:4px}
 .search input{flex:1;min-width:0;border:0;background:none;color:inherit;font:inherit;font-size:.98rem;padding:9px 16px;outline:none}
-.search button{border:0;border-radius:99px;background:radial-gradient(ellipse at center,rgba(224,32,31,.95) 0%,rgba(224,32,31,.4) 100%);color:#fff;font-weight:700;padding:0 18px;cursor:pointer;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase}
+.search button{border:0;border-radius:99px;background:radial-gradient(ellipse at center,rgba(21,87,166,.95) 0%,rgba(21,87,166,.4) 100%);color:#fff;font-weight:700;padding:0 18px;cursor:pointer;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase}
 .layout{max-width:1360px;margin:auto;display:flex;gap:30px;padding:14px 28px 60px;align-items:flex-start}
 aside{width:250px;flex:none;position:sticky;top:14px;padding:16px;border-radius:24px;background:var(--glass);border:1px solid var(--edge);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);box-shadow:0 14px 40px -16px var(--sh),inset 0 1px 0 rgba(255,255,255,.4)}
 aside h3{margin:0 0 7px;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
@@ -598,11 +745,11 @@ aside h3{margin:0 0 7px;font-size:.66rem;letter-spacing:.14em;text-transform:upp
 .ddb .l{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ddb .c{opacity:.6;transition:transform .2s}.dd.open .c{transform:rotate(180deg)}
 .ddp{display:none;position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:30;padding:8px;border-radius:20px;background:var(--pnl);border:1px solid var(--edge);backdrop-filter:blur(26px) saturate(1.6);-webkit-backdrop-filter:blur(26px) saturate(1.6);box-shadow:0 24px 60px -12px var(--sh)}
 .dd.open .ddp{display:block}
-.acts{display:flex;gap:6px;padding:2px 2px 8px}.acts button{flex:1;border:0;border-radius:99px;padding:6px 8px;font-size:.7rem;font-weight:700;cursor:pointer;color:var(--tx);background:radial-gradient(ellipse at center,rgba(224,32,31,.22),rgba(224,32,31,.06))}
+.acts{display:flex;gap:6px;padding:2px 2px 8px}.acts button{flex:1;border:0;border-radius:99px;padding:6px 8px;font-size:.7rem;font-weight:700;cursor:pointer;color:var(--tx);background:radial-gradient(ellipse at center,rgba(21,87,166,.22),rgba(21,87,166,.06))}
 .lst{max-height:300px;overflow-y:auto}
-.opt{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:12px;cursor:pointer;font-size:.86rem;user-select:none}.opt:hover{background:rgba(224,32,31,.1)}
+.opt{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:12px;cursor:pointer;font-size:.86rem;user-select:none}.opt:hover{background:rgba(217,39,50,.1)}
 .opt .k{width:17px;height:17px;flex:none;border-radius:6px;border:1.5px solid var(--mut);display:grid;place-items:center;font-size:.65rem;color:transparent}
-.opt.on .k{border-color:transparent;color:#fff;background:radial-gradient(circle,var(--red) 35%,rgba(224,32,31,.55) 100%)}
+.opt.on .k{border-color:transparent;color:#fff;background:radial-gradient(circle,var(--blue) 35%,rgba(21,87,166,.55) 100%)}
 .opt .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.opt .n{font-size:.72rem;opacity:.6;font-variant-numeric:tabular-nums}
 main{flex:1;min-width:0}
 .bar{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:2px 4px 18px}
@@ -611,7 +758,7 @@ main{flex:1;min-width:0}
 a.card{position:relative;display:flex;flex-direction:column;gap:12px;padding:10px 10px 16px;border-radius:26px;overflow:hidden;text-decoration:none;color:inherit;background:var(--glass);border:1px solid var(--edge);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);box-shadow:0 16px 44px -18px var(--sh),inset 0 1px 0 rgba(255,255,255,.45);transition:transform .3s,box-shadow .3s}
 a.card::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 70% at 0% 0%,var(--c0) 0%,transparent 62%);opacity:.55}
 a.card>*{position:relative}a.card:hover{transform:translateY(-4px);box-shadow:0 26px 60px -16px var(--sh),inset 0 1px 0 rgba(255,255,255,.55)}
-.im{aspect-ratio:16/10;border-radius:18px;overflow:hidden}.im img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}a.card:hover .im img{transform:scale(1.05)}
+.im{position:relative;aspect-ratio:16/10;border-radius:18px;overflow:hidden}.im img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}a.card:hover .im img{transform:scale(1.05)}
 .ph{width:100%;height:100%;display:grid;place-items:center;font-size:2.8rem;background:radial-gradient(circle at 50% 50%,var(--c0) 0%,var(--c1) 100%)}
 .cb{display:flex;flex-direction:column;gap:8px;padding:0 6px;flex:1}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -620,29 +767,40 @@ a.card>*{position:relative}a.card:hover{transform:translateY(-4px);box-shadow:0 
 a.card h3{margin:0;font-size:1.1rem;line-height:1.15;letter-spacing:-.02em;font-weight:750}
 a.card p{margin:0;font-size:.85rem;line-height:1.38;color:var(--mut);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 a.card time{margin-top:auto;padding-top:6px;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
-.novo{animation:f 1.8s}@keyframes f{from{box-shadow:0 0 0 3px rgba(224,32,31,.55)}}
+.novo{animation:f 1.8s}@keyframes f{from{box-shadow:0 0 0 3px rgba(217,39,50,.55)}}
 .vazio{padding:30px 6px;color:var(--mut)}
 #mais{display:block;margin:34px auto 0;padding:12px 32px;border:1px solid var(--edge);border-radius:99px;background:var(--glass);backdrop-filter:blur(16px);color:var(--tx);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.74rem;cursor:pointer}
-#mais:hover{background:radial-gradient(ellipse at center,rgba(224,32,31,.9),rgba(224,32,31,.45));color:#fff}
+#mais:hover{background:radial-gradient(ellipse at center,rgba(21,87,166,.9),rgba(21,87,166,.45));color:#fff}
 #fb{display:none;margin:6px 28px 0;padding:9px 18px;border:1px solid var(--edge);border-radius:99px;background:var(--glass);color:var(--tx);font-weight:700;font-size:.78rem}
 @media(max-width:860px){.layout{flex-direction:column;padding:12px 16px 50px;gap:18px}aside{display:none;width:100%;position:static}aside.open{display:block}#fb{display:inline-block;margin-left:16px}.hw{padding:14px 16px 10px}.grid{gap:20px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
 body{padding-bottom:118px}
 .radio{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:50;width:min(940px,calc(100% - 24px));display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:10px 16px;border-radius:28px;background:var(--pnl);border:1px solid var(--edge);backdrop-filter:blur(26px) saturate(1.6);-webkit-backdrop-filter:blur(26px) saturate(1.6);box-shadow:0 22px 54px -14px var(--sh),inset 0 1px 0 rgba(255,255,255,.45)}
 .rinfo{display:flex;align-items:center;gap:11px;flex:1 1 230px;min-width:0}
-.rdot{width:11px;height:11px;border-radius:50%;flex:none;background:radial-gradient(circle,var(--red) 30%,rgba(224,32,31,.25) 100%)}.radio.on .rdot{animation:p 1.4s infinite}
+.rdot{width:11px;height:11px;border-radius:50%;flex:none;background:radial-gradient(circle,var(--red) 30%,rgba(217,39,50,.25) 100%)}.radio.on .rdot{animation:p 1.4s infinite}
 .rinfo b{display:block;font-size:.9rem;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rinfo small{display:block;color:var(--mut);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase}
-.rband{display:flex;gap:4px;padding:3px;border-radius:99px;background:rgba(224,32,31,.09)}
+.rband{display:flex;gap:4px;padding:3px;border-radius:99px;background:rgba(217,39,50,.09)}
 .rband button{border:0;border-radius:99px;padding:6px 13px;font-size:.72rem;font-weight:700;background:none;color:var(--tx);cursor:pointer}
-.rband button.on{background:radial-gradient(ellipse at center,rgba(224,32,31,.95),rgba(224,32,31,.5));color:#fff}
+.rband button.on{background:radial-gradient(ellipse at center,rgba(21,87,166,.95),rgba(21,87,166,.5));color:#fff}
 .rctl{display:flex;align-items:center;gap:10px}
-#rplay{width:46px;height:46px;border-radius:50%;border:0;color:#fff;font-size:1rem;cursor:pointer;background:radial-gradient(circle at 35% 30%,#ff7a8c,rgba(224,32,31,.95) 60%,rgba(179,18,31,.72));box-shadow:0 8px 22px -6px rgba(224,32,31,.75)}
+#rplay{width:46px;height:46px;border-radius:50%;border:0;color:#fff;font-size:1rem;cursor:pointer;background:radial-gradient(circle at 35% 30%,#ff7a8c,rgba(217,39,50,.95) 60%,rgba(179,18,31,.72));box-shadow:0 8px 22px -6px rgba(217,39,50,.75)}
 #rmute{border:0;background:none;font-size:1.3rem;cursor:pointer;padding:4px;line-height:1}
 #rvol{width:120px;accent-color:var(--red)}
 #rmsg{flex-basis:100%;font-size:.76rem;color:var(--mut)}#rmsg:empty{display:none}
 #rlink{display:none;flex-basis:100%;font-size:.76rem;color:var(--red)}.radio.fb #rlink{display:block}
 #rfb{flex-basis:100%;height:96px;border:0;border-radius:16px}#rfb[hidden]{display:none}
 @media(max-width:620px){#rvol{width:84px}.rband{order:3}.radio{border-radius:22px;padding:10px 12px}}
+.orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.orbs i{position:absolute;left:0;top:0;width:calc(46vmax - var(--k) * 1.8vmax);aspect-ratio:1;border-radius:50%;opacity:calc(.92 - var(--k) * .1);background:radial-gradient(circle at 36% 32%,rgba(242,194,48,.85) 0%,rgba(217,39,50,.6) 36%,rgba(21,87,166,.25) 66%,rgba(21,87,166,0) 100%);animation:orb 64s ease-in-out infinite;animation-delay:calc((var(--k) - 7) * .9s);will-change:transform}
+@keyframes orb{0%,100%{transform:translate(calc(-50% + 8vw),calc(-50% + 20vh))}25%{transform:translate(calc(-50% + 64vw),calc(-50% + 6vh))}50%{transform:translate(calc(-50% + 92vw),calc(-50% + 58vh))}75%{transform:translate(calc(-50% + 36vw),calc(-50% + 94vh))}}
+@media(prefers-color-scheme:dark){.orbs{opacity:.6}}
+@media(prefers-reduced-motion:reduce){.orbs i{animation:none;transform:translate(calc(-50% + 70vw),calc(-50% + 30vh))}}
+.im.lg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}.im.pos{background:linear-gradient(135deg,#fff,#eeebe3)}.im.neg{background:linear-gradient(135deg,#171717,#2c2c2c)}
+.im.lg img{max-width:44%;max-height:48%;object-fit:contain;transition:none}a.card:hover .im.lg img{transform:none}
+.ln{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#171717;text-align:center;padding:0 10px}.neg .ln{color:#fff}
+.cr{position:absolute;left:0;right:0;bottom:0;padding:16px 9px 5px;font-size:.62rem;line-height:1.2;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.62));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.rodape{max-width:1360px;margin:34px auto 0;padding:0 28px 10px;font-size:.74rem;line-height:1.5;color:var(--mut)}.rodape a{color:var(--blue)}
 </style></head><body>
+<div class="orbs" aria-hidden="true"><i style="--k:0"></i><i style="--k:1"></i><i style="--k:2"></i><i style="--k:3"></i><i style="--k:4"></i><i style="--k:5"></i><i style="--k:6"></i><i style="--k:7"></i></div>
 <header class="hero">
 <svg class="art" viewBox="0 0 1200 140" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
 <defs>
@@ -653,12 +811,9 @@ body{padding-bottom:118px}
 <feComposite in="d" in2="b" operator="in" result="dd"/><feMerge><feMergeNode in="b"/><feMergeNode in="dd"/></feMerge></filter>
 <filter id="air" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="12"/></filter>
 </defs>
-<circle cx="1050" cy="70" r="92" fill="url(#sp)" filter="url(#gr)"/>
-<path d="M1200 140 L1200 20 A130 130 0 0 0 1070 140 Z" fill="#e0201f" opacity=".45" filter="url(#air)"/>
+<path d="M1200 140 L1200 20 A130 130 0 0 0 1070 140 Z" fill="#D92732" opacity=".45" filter="url(#air)"/>
 <circle cx="1170" cy="128" r="46" fill="currentColor" opacity=".5" filter="url(#air)"/>
 <circle cx="880" cy="22" r="30" fill="#ff7a59" opacity=".7" filter="url(#air)"/>
-<circle cx="1050" cy="70" r="128" fill="none" stroke="currentColor" stroke-width="1" opacity=".28"/>
-<circle cx="1050" cy="70" r="172" fill="none" stroke="currentColor" stroke-width="1" opacity=".16"/>
 </svg>
 <div class="hw"><div><div class="kick"><span><span class="dot"></span>Ao vivo</span><span>Última atualização: <span id="upd">aguardando…</span></span></div>
 <h1><span class="st">★</span> __NOME__</h1></div>
@@ -667,6 +822,7 @@ body{padding-bottom:118px}
 <button id="fb">☰ Filtros</button>
 <div class="layout"><aside id="side"><h3>Eixos temáticos</h3><div class="dd" id="ddt"></div><h3>Portais</h3><div class="dd" id="ddf"></div></aside>
 <main><div class="bar"><h2 id="titulo">Todas as notícias</h2><span id="cont"></span></div><div class="grid" id="lista"></div><button id="mais">Carregar mais</button></main></div>
+<footer class="rodape">__NOME__ é um agregador de notícias: exibe apenas título, breve resumo e imagem de capa com crédito, sempre com link para a matéria original. Todo o conteúdo pertence aos respectivos autores e veículos.__CONTATO__</footer>
 <div id="radio" class="radio" role="region" aria-label="Rádio Nacional ao vivo">
 <div class="rinfo"><span class="rdot"></span><div><b id="rnome">Rádio Nacional FM Brasília</b><small id="rsub">96,1 MHz · ao vivo</small></div></div>
 <div class="rband"><button type="button" data-r="fm" class="on">FM 96,1</button><button type="button" data-r="am">AM 980</button></div>
@@ -675,21 +831,29 @@ body{padding-bottom:118px}
 <iframe id="rfb" hidden allow="autoplay" title="Rádio Nacional (player oficial da EBC)"></iframe>
 </div>
 <script>
-const CORES={"Política":"#e0201f","Internacional":"#1f4e5f","Sociedade":"#e8590c","Música":"#e0a100","Cinema":"#6d28d9","Entretenimento":"#d6336c","Artes":"#2b8a3e","Literatura":"#8a5a2b","Ciência":"#1971c2"};
-const ICO={"Política":"🏛️","Internacional":"🌍","Sociedade":"✊","Música":"🎵","Cinema":"🎬","Entretenimento":"🍿","Artes":"🎨","Literatura":"📚","Ciência":"🔬"};
-let selT=new Set(),selF=new Set(),pop=[],q="",ultimo=null,timer=null,bt=null,aberto=null,dados=null;
+const CORES={"Política":"#D92732","Internacional":"#1557A6","Sociedade":"#F2C230","Música":"#E8782E","Cinema":"#171717","Entretenimento":"#8A3FA0","Artes":"#3F8F6B","Literatura":"#8B4A2B","Ciência":"#2A86B8","Filosofia":"#5B6573","Voluntariado":"#E5646B"};
+const ICO={"Política":"🏛️","Internacional":"🌍","Sociedade":"✊","Música":"🎵","Cinema":"🎬","Entretenimento":"🍿","Artes":"🎨","Literatura":"📚","Ciência":"🔬","Filosofia":"🦉","Voluntariado":"🤝"};
+let logos=new Set(),selT=new Set(),selF=new Set(),pop=[],q="",ultimo=null,timer=null,bt=null,aberto=null,dados=null;
 const $=id=>document.getElementById(id),L=$("lista");
 const norm=t=>(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return"rgba("+(n>>16)+","+((n>>8)&255)+","+(n&255)+","+a+")"};
 function ago(t){const s=Math.max(0,Date.now()/1000-t);if(s<60)return"agora";if(s<3600)return"há "+Math.floor(s/60)+" min";
  if(s<86400)return"há "+Math.floor(s/3600)+" h";return new Date(t*1000).toLocaleDateString("pt-BR")}
 function fmt(t){return new Date(t*1000).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).replace(", "," às ")}
+const LUM=new Map();
+function lumLogo(img){try{const c=document.createElement("canvas");c.width=c.height=24;const x=c.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,24,24);
+ const d=x.getImageData(0,0,24,24).data;let s=0,n=0;for(let i=0;i<d.length;i+=4){if(d[i+3]>40){s+=(.2126*d[i]+.7152*d[i+1]+.0722*d[i+2])/255;n++}}return n?s/n:0}catch(e){return 0}}
 function card(n,novo){const a=document.createElement("a");a.className="card"+(novo?" novo":"");a.href=n.link;a.target="_blank";a.rel="noopener";
  const c=CORES[n.tema]||"#888";a.style.setProperty("--c0",rgba(c,.5));a.style.setProperty("--c1",rgba(c,.07));
  a.onclick=()=>{try{navigator.sendBeacon("/api/clique",new Blob([JSON.stringify({tema:n.tema})],{type:"application/json"}))}catch(e){}};
  const im=document.createElement("div");im.className="im";
- const ph=()=>{im.innerHTML="";const p=document.createElement("div");p.className="ph";p.textContent=ICO[n.tema]||"📰";im.appendChild(p)};
- if(n.imagem){const i=document.createElement("img");i.src=n.imagem;i.loading="lazy";i.alt="";i.onerror=ph;im.appendChild(i)}else ph();
+ const logo=()=>{im.innerHTML="";im.className="im lg pos";
+  if(logos.has(n.fonte)){const i=new Image();i.alt=n.fonte;i.src="/logo/"+encodeURIComponent(n.fonte);
+   i.onload=()=>{let l=LUM.get(n.fonte);if(l==null){l=lumLogo(i);LUM.set(n.fonte,l)}im.classList.remove("pos","neg");im.classList.add(l>.62?"neg":"pos")};
+   i.onerror=()=>{i.remove()};im.appendChild(i)}else{const p=document.createElement("div");p.className="ph";p.textContent=ICO[n.tema]||"📰";im.appendChild(p)}
+  const s=document.createElement("span");s.className="ln";s.textContent=n.fonte;if(logos.has(n.fonte))im.appendChild(s)};
+ if(n.imagem){const i=document.createElement("img");i.src=n.imagem;i.loading="lazy";i.alt="";i.referrerPolicy="no-referrer";i.onerror=logo;im.appendChild(i);
+  if(n.credito){const k=document.createElement("span");k.className="cr";k.textContent=n.credito;k.title=n.credito;im.appendChild(k)}}else logo();
  const b=document.createElement("div");b.className="cb";const r=document.createElement("div");r.className="row";
  const tg=document.createElement("span");tg.className="tag";tg.textContent=(ICO[n.tema]||"📰")+" "+(n.tema||"Geral");
  const sr=document.createElement("span");sr.className="src";sr.textContent=n.fonte;r.append(tg,sr);
@@ -721,7 +885,7 @@ function dd(id,itens,sel,rotulo,extras){const box=$(id),old=box.querySelector(".
 function dd2(){if(!dados)return;const mp=Object.fromEntries(dados.temas.map(x=>[x.nome,x.total]));
  dd("ddt",Object.keys(CORES).map(k=>({nome:k,ico:ICO[k],total:mp[k]||0})),selT,"Todos os temas",[["Mais populares",()=>{selT=new Set(pop);go()}],["Ver todos",()=>{selT.clear();go()}]]);
  dd("ddf",dados.fontes,selF,"Todos os portais",[["Ver todos",()=>{selF.clear();go()}]])}
-async function filtros(){dados=await (await fetch("/api/filtros?"+qs())).json();dd2();
+async function filtros(){dados=await (await fetch("/api/filtros?"+qs())).json();logos=new Set(dados.logos||[]);dd2();
  const tot=dados.fontes.reduce((a,b)=>a+b.total,0);$("cont").textContent=tot+(tot===1?" notícia":" notícias");
  $("upd").textContent=dados.atualizado?fmt(dados.atualizado):"aguardando a primeira coleta…"}
 function go(){carregar(true);filtros()}
@@ -734,7 +898,7 @@ es.onmessage=e=>{const n=JSON.parse(e.data),h=norm(n.titulo+" "+(n.resumo||"")+"
  const ok=norm(q).split(/\s+/).filter(Boolean).every(w=>h.includes(w));
  if(ok&&(!selT.size||selT.has(n.tema))&&(!selF.size||selF.has(n.fonte))){const v=L.querySelector(".vazio");if(v)v.remove();L.prepend(card(n,true))}
  clearTimeout(timer);timer=setTimeout(filtros,2000)};
-(async()=>{try{const r=await (await fetch("/api/filtros")).json();pop=r.populares||[];selT=new Set(pop)}catch(e){}go()})();
+(async()=>{try{const r=await (await fetch("/api/filtros")).json();pop=r.populares||[];selT=new Set(pop);logos=new Set(r.logos||[])}catch(e){}go()})();
 setInterval(()=>{if(!aberto)filtros()},30000);
 (function(){
 const au=new Audio(),$r=id=>document.getElementById(id),ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}};
@@ -780,7 +944,9 @@ iniciar()})();
 
 @app.route("/")
 def home():
-    return PAGINA.replace("__NOME__", NOME_SITE)
+    import html as _h
+    contato = (' Para pedir a remoção de um conteúdo: <a href="mailto:%s">%s</a>.' % (_h.escape(EMAIL_CONTATO), _h.escape(EMAIL_CONTATO))) if EMAIL_CONTATO else ""
+    return PAGINA.replace("__NOME__", _h.escape(NOME_SITE)).replace("__CONTATO__", contato)
 
 
 preparar_banco()

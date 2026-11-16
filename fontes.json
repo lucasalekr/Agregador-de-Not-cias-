@@ -1,39 +1,147 @@
 [
  {
-  "nome": "EBC",
-  "site": "https://www.ebc.com.br/",
+  "nome": "Nexo Jornal",
+  "site": "https://www.nexojornal.com.br/",
   "feeds": [
-   "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml"
+   "https://www.nexojornal.com.br/rss.xml"
   ],
-  "categoria": "Jornalismo",
-  "tema": "Sociedade"
+  "categoria": "Política",
+  "tema": "Política"
  },
  {
-  "nome": "Piauí",
+  "nome": "Agência Pública",
+  "site": "https://apublica.org/",
+  "feeds": [
+   "https://apublica.org/feed/"
+  ],
+  "categoria": "Política",
+  "tema": "Política"
+ },
+ {
+  "nome": "JOTA",
+  "site": "https://www.jota.info/",
+  "feeds": [
+   "https://www.jota.info/feed"
+  ],
+  "categoria": "Política",
+  "tema": "Política"
+ },
+ {
+  "nome": "The Intercept Brasil",
+  "site": "https://www.intercept.com.br/",
+  "feeds": [
+   "https://www.intercept.com.br/feed/"
+  ],
+  "categoria": "Política",
+  "tema": "Política"
+ },
+ {
+  "nome": "Congresso em Foco",
+  "site": "https://congressoemfoco.com.br/",
+  "feeds": [
+   "https://congressoemfoco.com.br/feed/"
+  ],
+  "categoria": "Política",
+  "tema": "Política"
+ },
+ {
+  "nome": "Poder360",
+  "site": "https://www.poder360.com.br/",
+  "feeds": [
+   "https://www.poder360.com.br/feed/"
+  ],
+  "categoria": "Política",
+  "tema": "Política"
+ },
+ {
+  "nome": "Revista piauí",
   "site": "https://piaui.folha.uol.com.br/",
   "feeds": [
    "https://piaui.folha.uol.com.br/feed/"
   ],
-  "categoria": "Revista",
+  "categoria": "Política",
   "tema": "Política"
  },
  {
-  "nome": "Superinteressante",
-  "site": "https://super.abril.com.br/",
+  "nome": "Outras Palavras",
+  "site": "https://outraspalavras.net/",
   "feeds": [
-   "https://super.abril.com.br/feed/"
+   "https://outraspalavras.net/feed/"
   ],
-  "categoria": "Ciência",
-  "tema": "Ciência"
+  "categoria": "Política",
+  "tema": "Política"
  },
  {
-  "nome": "ICL",
-  "site": "https://icl.com.br/",
+  "nome": "Le Monde Diplomatique Brasil",
+  "site": "https://diplomatique.org.br/",
   "feeds": [
-   "https://icl.com.br/feed/"
+   "https://diplomatique.org.br/feed/"
   ],
-  "categoria": "Jornalismo",
+  "categoria": "Política",
   "tema": "Política"
+ },
+ {
+  "nome": "Revista Serrote",
+  "site": "https://ims.com.br/publicacoes/serrote/",
+  "feeds": [
+   "https://ims.com.br/publicacoes/serrote/feed/",
+   "https://ims.com.br/feed/"
+  ],
+  "categoria": "Política",
+  "tema": "Política"
+ },
+ {
+  "nome": "Buala",
+  "site": "https://www.buala.org/",
+  "feeds": [],
+  "categoria": "Internacional",
+  "tema": "Internacional"
+ },
+ {
+  "nome": "Nippon.com",
+  "site": "https://www.nippon.com/pt/",
+  "feeds": [],
+  "categoria": "Internacional",
+  "tema": "Internacional"
+ },
+ {
+  "nome": "DW Brasil",
+  "site": "https://www.dw.com/pt-br/",
+  "feeds": [
+   "https://rss.dw.com/rdf/rss-br-all"
+  ],
+  "categoria": "Internacional",
+  "tema": "Internacional"
+ },
+ {
+  "nome": "Voz da América",
+  "site": "https://www.voaportugues.com/",
+  "feeds": [],
+  "categoria": "Internacional",
+  "tema": "Internacional"
+ },
+ {
+  "nome": "LatAm Journalism Review",
+  "site": "https://latamjournalismreview.org/pt-br/",
+  "feeds": [
+   "https://latamjournalismreview.org/pt-br/feed/"
+  ],
+  "categoria": "Internacional",
+  "tema": "Internacional"
+ },
+ {
+  "nome": "SBS Português",
+  "site": "https://www.sbs.com.au/language/portuguese/pt",
+  "feeds": [],
+  "categoria": "Internacional",
+  "tema": "Internacional"
+ },
+ {
+  "nome": "openDemocracy",
+  "site": "https://www.opendemocracy.net/pt/",
+  "feeds": [],
+  "categoria": "Internacional",
+  "tema": "Internacional"
  },
  {
   "nome": "Opera Mundi",
@@ -43,94 +151,99 @@
   "tema": "Internacional"
  },
  {
-  "nome": "Le Monde Diplomatique Brasil",
-  "site": "https://diplomatique.org.br/",
+  "nome": "BBC News Brasil",
+  "site": "https://www.bbc.com/portuguese",
   "feeds": [
-   "https://diplomatique.org.br/feed/"
+   "https://feeds.bbci.co.uk/portuguese/rss.xml"
   ],
   "categoria": "Internacional",
   "tema": "Internacional"
  },
  {
-  "nome": "Revista CULT",
-  "site": "https://revistacult.uol.com.br/",
-  "feeds": [
-   "https://revistacult.uol.com.br/home/feed/"
-  ],
-  "categoria": "Cultura",
-  "tema": "Artes"
- },
- {
-  "nome": "MUBI Notebook",
-  "site": "https://mubi.com/pt/notebook",
-  "feeds": [
-   "https://mubi.com/notebook/posts.atom"
-  ],
-  "categoria": "Cinema",
-  "tema": "Cinema"
- },
- {
-  "nome": "Funarte",
-  "site": "https://www.gov.br/funarte/pt-br",
-  "feeds": [
-   "https://www.gov.br/funarte/pt-br/assuntos/noticias/RSS"
-  ],
-  "categoria": "Cultura",
-  "tema": "Artes"
- },
- {
   "nome": "Revista Continente",
-  "site": "https://revistacontinente.com.br/",
+  "site": "https://www.revistacontinente.com.br/",
   "feeds": [
-   "https://revistacontinente.com.br/feed/"
+   "https://www.revistacontinente.com.br/feed/"
   ],
-  "categoria": "Cultura",
-  "tema": "Literatura"
+  "categoria": "Sociedade",
+  "tema": "Sociedade"
  },
  {
-  "nome": "Serrote",
-  "site": "https://ims.com.br/publicacao/serrote/",
+  "nome": "Papo de Homem",
+  "site": "https://www.papodehomem.com.br/",
   "feeds": [
-   "https://ims.com.br/publicacao/serrote/feed/"
+   "https://www.papodehomem.com.br/feed/"
   ],
-  "categoria": "Ensaios",
-  "tema": "Literatura"
+  "categoria": "Sociedade",
+  "tema": "Sociedade"
  },
  {
-  "nome": "Revista O Grito!",
-  "site": "https://revistaogrito.com/",
+  "nome": "Gênero e Número",
+  "site": "https://www.generonumero.media/",
   "feeds": [
-   "https://revistaogrito.com/feed/"
+   "https://www.generonumero.media/feed/"
   ],
-  "categoria": "Cultura",
-  "tema": "Artes"
+  "categoria": "Sociedade",
+  "tema": "Sociedade"
  },
  {
-  "nome": "Quatro Cinco Um",
-  "site": "https://www.quatrocincoum.com.br/",
+  "nome": "Associação Brasileira de Antropologia",
+  "site": "https://portal.abant.org.br/",
   "feeds": [
-   "https://www.quatrocincoum.com.br/feed/"
+   "https://portal.abant.org.br/feed/"
   ],
-  "categoria": "Livros",
-  "tema": "Literatura"
+  "categoria": "Sociedade",
+  "tema": "Sociedade"
  },
  {
-  "nome": "Revista Berro",
-  "site": "https://revistaberro.com/",
-  "feeds": [
-   "https://revistaberro.com/feed/"
-  ],
-  "categoria": "Cultura",
-  "tema": "Literatura"
+  "nome": "R@U – Antropologia UFSCar",
+  "site": "https://www.rau.ufscar.br/",
+  "feeds": [],
+  "categoria": "Sociedade",
+  "tema": "Sociedade"
  },
  {
-  "nome": "Bravo!",
-  "site": "https://bravo.abril.com.br/",
+  "nome": "Monkeybuzz",
+  "site": "https://monkeybuzz.com.br/",
   "feeds": [
-   "https://bravo.abril.com.br/feed/"
+   "https://monkeybuzz.com.br/feed/"
   ],
-  "categoria": "Cultura",
-  "tema": "Artes"
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Tenho Mais Discos Que Amigos!",
+  "site": "https://www.tenhomaisdiscosqueamigos.com/",
+  "feeds": [
+   "https://www.tenhomaisdiscosqueamigos.com/feed/"
+  ],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Scream & Yell",
+  "site": "https://www.screamandyell.com/",
+  "feeds": [],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Miojo Indie",
+  "site": "https://www.miojoindie.com.br/",
+  "feeds": [
+   "https://www.miojoindie.com.br/feed/"
+  ],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Farofafá",
+  "site": "https://www.farofafa.com.br/",
+  "feeds": [
+   "https://www.farofafa.com.br/feed/"
+  ],
+  "categoria": "Música",
+  "tema": "Música"
  },
  {
   "nome": "NOIZE",
@@ -142,12 +255,146 @@
   "tema": "Música"
  },
  {
-  "nome": "ZUM",
-  "site": "https://revistazum.com.br/",
+  "nome": "Música & Mercado",
+  "site": "https://www.musicaemercado.org/",
   "feeds": [
-   "https://revistazum.com.br/feed/"
+   "https://www.musicaemercado.org/feed/"
   ],
-  "categoria": "Fotografia",
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Rap Mais",
+  "site": "https://www.rapmais.com/",
+  "feeds": [
+   "https://www.rapmais.com/feed/"
+  ],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Portal Rap Mais",
+  "site": "https://portalrapmais.com/",
+  "feeds": [
+   "https://portalrapmais.com/feed/"
+  ],
+  "categoria": "Música",
+  "tema": "Música"
+ },
+ {
+  "nome": "Revista Cinética",
+  "site": "https://revistacinetica.com.br/",
+  "feeds": [
+   "https://revistacinetica.com.br/feed/"
+  ],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "Contracampo",
+  "site": "https://www.contracampo.com.br/",
+  "feeds": [],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "Cinematório",
+  "site": "https://www.cinematorio.com.br/",
+  "feeds": [
+   "https://www.cinematorio.com.br/feed/"
+  ],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "AdoroCinema",
+  "site": "https://www.adorocinema.com/",
+  "feeds": [],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "ABC – Cinematografia",
+  "site": "https://www.abcine.org.br/",
+  "feeds": [
+   "https://www.abcine.org.br/feed/"
+  ],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "Cineplayers",
+  "site": "https://www.cineplayers.com/",
+  "feeds": [],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "Plano Crítico",
+  "site": "https://www.planocritico.com/",
+  "feeds": [
+   "https://www.planocritico.com/feed/"
+  ],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "Portal Brasileiro de Cinema",
+  "site": "https://www.portalbrasileirodecinema.com.br/",
+  "feeds": [
+   "https://www.portalbrasileirodecinema.com.br/feed/"
+  ],
+  "categoria": "Cinema",
+  "tema": "Cinema"
+ },
+ {
+  "nome": "Jornal Nippak",
+  "site": "https://www.jornalnippak.com.br/",
+  "feeds": [
+   "https://www.jornalnippak.com.br/feed/"
+  ],
+  "categoria": "Entretenimento",
+  "tema": "Entretenimento"
+ },
+ {
+  "nome": "Omelete",
+  "site": "https://www.omelete.com.br/",
+  "feeds": [],
+  "categoria": "Entretenimento",
+  "tema": "Entretenimento"
+ },
+ {
+  "nome": "Jovem Nerd",
+  "site": "https://www.jovemnerd.com.br/",
+  "feeds": [],
+  "categoria": "Entretenimento",
+  "tema": "Entretenimento"
+ },
+ {
+  "nome": "Papelpop",
+  "site": "https://www.papelpop.com/",
+  "feeds": [
+   "https://www.papelpop.com/feed/"
+  ],
+  "categoria": "Entretenimento",
+  "tema": "Entretenimento"
+ },
+ {
+  "nome": "Popload",
+  "site": "https://www.popload.com.br/",
+  "feeds": [
+   "https://www.popload.com.br/feed/"
+  ],
+  "categoria": "Entretenimento",
+  "tema": "Entretenimento"
+ },
+ {
+  "nome": "seLecT",
+  "site": "https://www.select.art.br/",
+  "feeds": [
+   "https://www.select.art.br/feed/"
+  ],
+  "categoria": "Artes",
   "tema": "Artes"
  },
  {
@@ -160,114 +407,263 @@
   "tema": "Artes"
  },
  {
-  "nome": "Agência Pública",
-  "site": "https://apublica.org/",
+  "nome": "Dasartes",
+  "site": "https://dasartes.com.br/",
   "feeds": [
-   "https://apublica.org/feed/"
+   "https://dasartes.com.br/feed/"
   ],
-  "categoria": "Jornalismo",
-  "tema": "Política"
+  "categoria": "Artes",
+  "tema": "Artes"
  },
  {
-  "nome": "Nexo Jornal",
-  "site": "https://www.nexojornal.com.br/",
+  "nome": "Prêmio PIPA",
+  "site": "https://www.premiopipa.com/",
   "feeds": [
-   "https://www.nexojornal.com.br/rss.xml"
+   "https://www.premiopipa.com/feed/"
   ],
-  "categoria": "Jornalismo",
-  "tema": "Política"
+  "categoria": "Artes",
+  "tema": "Artes"
  },
  {
-  "nome": "Outras Palavras",
-  "site": "https://outraspalavras.net/",
-  "feeds": [
-   "https://outraspalavras.net/feed/"
-  ],
-  "categoria": "Jornalismo",
-  "tema": "Política"
- },
- {
-  "nome": "Brasil de Fato",
-  "site": "https://www.brasildefato.com.br/",
-  "feeds": [
-   "https://www.brasildefato.com.br/rss"
-  ],
-  "categoria": "Jornalismo",
-  "tema": "Política"
- },
- {
-  "nome": "CartaCapital",
-  "site": "https://www.cartacapital.com.br/",
-  "feeds": [
-   "https://www.cartacapital.com.br/feed/"
-  ],
-  "categoria": "Jornalismo",
-  "tema": "Política"
+  "nome": "ArchDaily Brasil",
+  "site": "https://www.archdaily.com.br/br",
+  "feeds": [],
+  "categoria": "Artes",
+  "tema": "Artes"
  },
  {
   "nome": "Itaú Cultural",
   "site": "https://www.itaucultural.org.br/",
   "feeds": [],
-  "categoria": "Cultura",
+  "categoria": "Artes",
   "tema": "Artes"
- },
- {
-  "nome": "Instituto Moreira Salles",
-  "site": "https://ims.com.br/",
-  "feeds": [
-   "https://ims.com.br/feed/"
-  ],
-  "categoria": "Cultura",
-  "tema": "Artes"
- },
- {
-  "nome": "Sesc",
-  "site": "https://www.sesc.com.br/",
-  "feeds": [],
-  "categoria": "Cultura",
-  "tema": "Artes"
- },
- {
-  "nome": "Cinemateca Brasileira",
-  "site": "https://cinemateca.org.br/",
-  "feeds": [
-   "https://cinemateca.org.br/feed/"
-  ],
-  "categoria": "Cinema",
-  "tema": "Cinema"
  },
  {
   "nome": "Enciclopédia Itaú Cultural",
   "site": "https://enciclopedia.itaucultural.org.br/",
   "feeds": [],
-  "categoria": "Cultura",
+  "categoria": "Artes",
   "tema": "Artes"
  },
  {
-  "nome": "A Escotilha",
-  "site": "https://www.aescotilha.com.br/",
+  "nome": "Instituto Inhotim",
+  "site": "https://www.inhotim.org.br/",
   "feeds": [
-   "https://www.aescotilha.com.br/feed/"
+   "https://www.inhotim.org.br/feed/"
   ],
-  "categoria": "Cultura",
+  "categoria": "Artes",
   "tema": "Artes"
  },
  {
-  "nome": "Jornal Opção",
-  "site": "https://www.jornalopcao.com.br/",
+  "nome": "Quatro Cinco Um",
+  "site": "https://quatrocincoum.com.br/",
   "feeds": [
-   "https://www.jornalopcao.com.br/feed/"
+   "https://quatrocincoum.com.br/feed/"
   ],
-  "categoria": "Jornalismo",
-  "tema": "Política"
+  "categoria": "Literatura",
+  "tema": "Literatura"
  },
  {
-  "nome": "Ministério da Cultura",
-  "site": "https://www.gov.br/cultura/pt-br",
+  "nome": "Suplemento Pernambuco",
+  "site": "https://www.suplementopernambuco.com.br/",
   "feeds": [
-   "https://www.gov.br/cultura/pt-br/assuntos/noticias/RSS"
+   "https://www.suplementopernambuco.com.br/feed/"
   ],
-  "categoria": "Governo",
-  "tema": "Artes"
+  "categoria": "Literatura",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Revista Cult",
+  "site": "https://revistacult.uol.com.br/",
+  "feeds": [
+   "https://revistacult.uol.com.br/home/feed/"
+  ],
+  "categoria": "Literatura",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Rascunho",
+  "site": "https://rascunho.com.br/",
+  "feeds": [
+   "https://rascunho.com.br/feed/"
+  ],
+  "categoria": "Literatura",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Revista Pessoa",
+  "site": "https://revistapessoa.com/",
+  "feeds": [
+   "https://revistapessoa.com/feed/"
+  ],
+  "categoria": "Literatura",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Literatura Brasileira – UFSC",
+  "site": "https://www.literaturabrasileira.ufsc.br/",
+  "feeds": [],
+  "categoria": "Literatura",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Biblioteca Pública do Paraná",
+  "site": "https://www.bpp.pr.gov.br/",
+  "feeds": [],
+  "categoria": "Literatura",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Portal de Revistas da USP",
+  "site": "https://www.revistas.usp.br/",
+  "feeds": [],
+  "categoria": "Literatura",
+  "tema": "Literatura"
+ },
+ {
+  "nome": "Pesquisa FAPESP",
+  "site": "https://revistapesquisa.fapesp.br/",
+  "feeds": [
+   "https://revistapesquisa.fapesp.br/feed/"
+  ],
+  "categoria": "Ciência",
+  "tema": "Ciência"
+ },
+ {
+  "nome": "Ciência Hoje",
+  "site": "https://cienciahoje.org.br/",
+  "feeds": [
+   "https://cienciahoje.org.br/feed/"
+  ],
+  "categoria": "Ciência",
+  "tema": "Ciência"
+ },
+ {
+  "nome": "ComCiência",
+  "site": "https://www.comciencia.br/",
+  "feeds": [],
+  "categoria": "Ciência",
+  "tema": "Ciência"
+ },
+ {
+  "nome": "Agência Bori",
+  "site": "https://abori.com.br/",
+  "feeds": [
+   "https://abori.com.br/feed/"
+  ],
+  "categoria": "Ciência",
+  "tema": "Ciência"
+ },
+ {
+  "nome": "Revista Galileu",
+  "site": "https://revistagalileu.globo.com/",
+  "feeds": [
+   "https://revistagalileu.globo.com/rss/ultimas/feed.xml"
+  ],
+  "categoria": "Ciência",
+  "tema": "Ciência"
+ },
+ {
+  "nome": "National Geographic Brasil",
+  "site": "https://www.nationalgeographicbrasil.com/",
+  "feeds": [],
+  "categoria": "Ciência",
+  "tema": "Ciência"
+ },
+ {
+  "nome": "IHU Unisinos",
+  "site": "https://www.ihu.unisinos.br/",
+  "feeds": [],
+  "categoria": "Ciência",
+  "tema": "Ciência"
+ },
+ {
+  "nome": "SciELO",
+  "site": "https://www.scielo.br/",
+  "feeds": [],
+  "categoria": "Ciência",
+  "tema": "Ciência"
+ },
+ {
+  "nome": "ANPOF",
+  "site": "https://anpof.org.br/",
+  "feeds": [
+   "https://anpof.org.br/feed/"
+  ],
+  "categoria": "Filosofia",
+  "tema": "Filosofia"
+ },
+ {
+  "nome": "Boitempo Editorial",
+  "site": "https://www.boitempoeditorial.com.br/",
+  "feeds": [],
+  "categoria": "Filosofia",
+  "tema": "Filosofia"
+ },
+ {
+  "nome": "Revista Discurso – USP",
+  "site": "https://www.revistas.usp.br/filosofia",
+  "feeds": [],
+  "categoria": "Filosofia",
+  "tema": "Filosofia"
+ },
+ {
+  "nome": "Filosofia – UERJ",
+  "site": "https://www.filosofia.uerj.br/",
+  "feeds": [],
+  "categoria": "Filosofia",
+  "tema": "Filosofia"
+ },
+ {
+  "nome": "Rapsódia",
+  "site": "https://www.revistas.usp.br/rapsodia",
+  "feeds": [],
+  "categoria": "Filosofia",
+  "tema": "Filosofia"
+ },
+ {
+  "nome": "Atados",
+  "site": "https://www.atados.com.br/",
+  "feeds": [
+   "https://www.atados.com.br/feed/"
+  ],
+  "categoria": "Voluntariado",
+  "tema": "Voluntariado"
+ },
+ {
+  "nome": "Transforma Brasil",
+  "site": "https://transformabrasil.com.br/",
+  "feeds": [
+   "https://transformabrasil.com.br/feed/"
+  ],
+  "categoria": "Voluntariado",
+  "tema": "Voluntariado"
+ },
+ {
+  "nome": "Parceiros Voluntários",
+  "site": "https://www.parceirosvoluntarios.org.br/",
+  "feeds": [
+   "https://www.parceirosvoluntarios.org.br/feed/"
+  ],
+  "categoria": "Voluntariado",
+  "tema": "Voluntariado"
+ },
+ {
+  "nome": "TETO Brasil",
+  "site": "https://teto.org.br/",
+  "feeds": [
+   "https://teto.org.br/feed/"
+  ],
+  "categoria": "Voluntariado",
+  "tema": "Voluntariado"
+ },
+ {
+  "nome": "Ação da Cidadania",
+  "site": "https://www.acaodacidadania.org.br/",
+  "feeds": [
+   "https://www.acaodacidadania.org.br/feed/"
+  ],
+  "categoria": "Voluntariado",
+  "tema": "Voluntariado"
  }
 ]
